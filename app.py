@@ -3,6 +3,7 @@ import requests
 import json
 import pandas as pd
 from PIL import Image
+import plotly.express as px
 
 
 def acumulados():
@@ -48,8 +49,9 @@ indices = range(1, len(maximos1) + 1)
 colunas = ['Município', '[mm]']
 df = pd.DataFrame(list(maximos1.items()), index=indices, columns=colunas)
 
-file_csv = convert_df(df)
+df_plot = df[0:20].sort_values(by='[mm]', ascending=True)
 
+file_csv = convert_df(df)
 
 imagem = Image.open('cepdec.png')
 st.image(imagem)
@@ -57,11 +59,22 @@ st.image(imagem)
 st.title('ACUMULADOS DE CHUVA - CEMADEN')
 st.text('Algoritmo para verificação dos acumulados de chuva no período de 24h')
 
-itemSelecionado = st.selectbox('Selecione o que deseja fazer:',
-                               ['Lista de acumulados', 'Download da tabela de acumulados'],
+itemSelecionado = st.selectbox('Selecione o que deseja visualizar:',
+                               ['Gráfico', 'Lista de acumulados', 'Download da tabela de acumulados'],
                                )
 
-if itemSelecionado == 'Lista de acumulados':
+if itemSelecionado == 'Gráfico':
+
+    if maximos1 != '':
+
+        fig = px.bar(df_plot, x='[mm]', y="Município", title="Acumulados de chuva em 24h")
+        st.plotly_chart(fig, use_container_width=False)
+
+    else:
+        st.text('Sem acumulados de chuvas no momento!')
+
+
+elif itemSelecionado == 'Lista de acumulados':
 
     if maximos1 != '':
 
@@ -80,8 +93,3 @@ elif itemSelecionado == 'Download da tabela de acumulados':
         data=file_csv,
         file_name='Acumulados.csv',
         mime='text/csv')
-
-    # Para visualizar a tabela por inteiro
-    # pd.set_option('display.max_rows', None)
-
-    # st.text(df)
