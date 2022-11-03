@@ -68,7 +68,7 @@ if itemSelecionado == 'Gráfico':
     if maximos1 != '':
 
         fig = px.bar(df_plot, x='[mm]', y="Município", title="Acumulados de chuva em 24h")
-        st.plotly_chart(fig, use_container_width=False)
+        st.plotly_chart(fig, use_container_width=True)
 
     else:
         st.text('Sem acumulados de chuvas no momento!')
