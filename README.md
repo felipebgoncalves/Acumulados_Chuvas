@@ -1,2 +1,6 @@
 # Acumulados_Chuvas
-Projeto desenvolvido para organização das informações de pluviômetros do CEMADEN
+Projeto de web scrapping desenvolvido para filtro das informações dos pluviômetros do CEMADEN
+
+
+Deploy do projeto utilizando Streamlit
+https://chuvas24h.streamlit.app/
