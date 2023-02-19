@@ -5,6 +5,12 @@ import pandas as pd
 from PIL import Image
 import plotly.express as px
 
+img = Image.open('logo_cepdec.png')
+st.set_page_config(page_title="Acumulados de Chuva", page_icon=img)
+
+imagem = Image.open('cepdec.png')
+st.image(imagem)
+
 
 def acumulados():
     # CONSULTANDO OS DADOS ONLINE:
@@ -37,47 +43,65 @@ def acumulados():
     return maximos
 
 
-@st.cache
+@st.cache_data
 def convert_df(my_df):
     # IMPORTANT: Cache the conversion to prevent computation on every rerun
     return my_df.to_csv().encode('utf-8')
 
 
+# ==========================================================================================
+# OBTENÇÃO DOS MÁXIMOS ATRAVÉS DA FUNÇÃO
 maximos1 = acumulados()
 
 indices = range(1, len(maximos1) + 1)
 colunas = ['Município', '[mm]']
+
+# DATAFRAME DA LISTA
 df = pd.DataFrame(list(maximos1.items()), index=indices, columns=colunas)
 
-df_plot = df[0:20].sort_values(by='[mm]', ascending=True)
+# ORGANIZAÇÃO DOS DADOS PARA PLOT
+df_plot = df[0:15].sort_values(by='[mm]', ascending=True)
 
+# CONVERSÃO DOS DADOS PARA CSV
 file_csv = convert_df(df)
 
-imagem = Image.open('cepdec.png')
-st.image(imagem)
+# --------------------------------------------------------------------------------------------
+# APLICAÇÃO DOS DADOS NO STREAMLIT
 
 st.title('ACUMULADOS DE CHUVA - CEMADEN')
-st.text('Algoritmo para verificação dos acumulados de chuva no período de 24h')
+# st.text('Script para verificação dos maiores acumulados de chuva de '
+#         'cada município do ES no período de 24h')
+st.text(
+    """
+    Script para verificação dos maiores acumulados de chuva de cada município do ES
+     no período de 24h
+    """
+)
+st.caption('Fonte dos dados: '  
+           'http://sjc.salvar.cemaden.gov.br/resources/graficos/interativo/grafico_CEMADEN.php?uf=ES#')
 
-itemSelecionado = st.selectbox('Selecione o que deseja visualizar:',
-                               ['Gráfico', 'Lista de acumulados', 'Download da tabela de acumulados'],
-                               )
+st.sidebar.title('MENU')
+
+itemSelecionado = st.sidebar.radio('Selecione o que deseja visualizar:',
+                                   ['Gráfico', 'Lista de Acumulados', 'Tabela de acumulados'],
+                                   )
 
 if itemSelecionado == 'Gráfico':
 
     if maximos1 != '':
 
-        fig = px.bar(df_plot, x='[mm]', y="Município", title="Acumulados de chuva em 24h")
-        st.plotly_chart(fig, use_container_width=True)
+        fig = px.bar(df_plot, x='[mm]', y="Município", title="Acumulados de chuva em 24h", height=600)
+        st.plotly_chart(fig, use_container_width=True, theme="streamlit")
 
     else:
         st.text('Sem acumulados de chuvas no momento!')
 
 
-elif itemSelecionado == 'Lista de acumulados':
+elif itemSelecionado == 'Lista de Acumulados':
 
     if maximos1 != '':
 
+        st.markdown('**Lista de acumulados de chuva em 24h:**')
         for i, j in zip(maximos1, range(1, len(maximos1) + 1)):
             item = '{}. {} - {} mm'.format(j, i, maximos1[i])
             st.text(item)
@@ -86,10 +110,12 @@ elif itemSelecionado == 'Lista de acumulados':
         st.text('Sem acumulados de chuvas no momento!')
 
 
-elif itemSelecionado == 'Download da tabela de acumulados':
+elif itemSelecionado == 'Tabela de acumulados':
 
     st.download_button(
         label="Download dos dados em CSV",
         data=file_csv,
         file_name='Acumulados.csv',
         mime='text/csv')
+
+    st.dataframe(df)
