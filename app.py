@@ -5,11 +5,15 @@ import pandas as pd
 from PIL import Image
 import plotly.express as px
 
-img = Image.open('logo_cepdec.png')
-st.set_page_config(page_title="Acumulados de Chuva", page_icon=img)
+img_1 = Image.open('logo_cepdec.png')
+st.set_page_config(page_title="Acumulados de Chuva", page_icon=img_1, layout='wide',
+                   initial_sidebar_state="expanded")
 
-imagem = Image.open('cepdec.png')
-st.image(imagem)
+img_2 = Image.open('cepdec.png')
+st.image(img_2)
+
+img_3 = Image.open('icons8-chuva-100.png')
+st.sidebar.image(img_3)
 
 
 def acumulados():
