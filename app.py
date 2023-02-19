@@ -43,7 +43,7 @@ def acumulados():
     return maximos
 
 
-@st.cache_data
+@st.cache
 def convert_df(my_df):
     # IMPORTANT: Cache the conversion to prevent computation on every rerun
     return my_df.to_csv().encode('utf-8')
