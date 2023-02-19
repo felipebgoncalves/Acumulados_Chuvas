@@ -60,7 +60,7 @@ colunas = ['Município', '[mm]']
 df = pd.DataFrame(list(maximos1.items()), index=indices, columns=colunas)
 
 # ORGANIZAÇÃO DOS DADOS PARA PLOT
-df_plot = df[0:15].sort_values(by='[mm]', ascending=True)
+df_plot = df[0:20].sort_values(by='[mm]', ascending=True)
 
 # CONVERSÃO DOS DADOS PARA CSV
 file_csv = convert_df(df)
@@ -90,7 +90,7 @@ if itemSelecionado == 'Gráfico':
 
     if maximos1 != '':
 
-        fig = px.bar(df_plot, x='[mm]', y="Município", title="Acumulados de chuva em 24h", height=600)
+        fig = px.bar(df_plot, x='[mm]', y="Município", title="Acumulados de chuva em 24h", height=750)
         st.plotly_chart(fig, use_container_width=True, theme="streamlit")
 
     else:
