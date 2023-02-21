@@ -63,6 +63,9 @@ colunas = ['Município', '[mm]']
 # DATAFRAME DA LISTA
 df = pd.DataFrame(list(maximos1.items()), index=indices, columns=colunas)
 
+if 'df' not in st.session_state:
+    st.session_state['df'] = df
+
 # ORGANIZAÇÃO DOS DADOS PARA PLOT
 df_plot = df[0:20].sort_values(by='[mm]', ascending=True)
 
