@@ -103,7 +103,6 @@ if itemSelecionado == 'Gráfico':
     else:
         st.text('Sem acumulados de chuvas no momento!')
 
-
 elif itemSelecionado == 'Lista de Acumulados':
 
     if maximos1 != '':
@@ -115,7 +114,6 @@ elif itemSelecionado == 'Lista de Acumulados':
 
     else:
         st.text('Sem acumulados de chuvas no momento!')
-
 
 elif itemSelecionado == 'Tabela de acumulados':
 
