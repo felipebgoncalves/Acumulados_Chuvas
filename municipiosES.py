@@ -84,15 +84,11 @@ def municipios_lat_lon_acumulados(df):
     # Novo dicionário para armazenar as coordenadas geográficas dos municípios
     coordenadas_municipios_chuva = {}
 
-    # Novo dicionário para armazenar os dados da coluna "mm" do DataFrame
-    # dados_mm = {}
-
     # Verificar quais municípios do dicionário de coordenadas estão no DataFrame
     for municipio, coordenadas in coordenadas_espirito_santo.items():
         if municipio in df['Município'].values:
             mm_value = df.loc[df['Município'] == municipio, '[mm]'].values[0]
             coordenadas_municipios_chuva[municipio] = coordenadas, mm_value
-            # dados_mm[municipio] = df.loc[df['Município'] == municipio, '[mm]'].values[0]
 
     return coordenadas_municipios_chuva
 
