@@ -112,7 +112,6 @@ with tab1:
             folium.Marker(
                 location=j[0],
                 tooltip=html,
-                # icon=folium.Icon(color='blue', icon='info-sign')
                 icon=folium.Icon(color='blue', icon='location-dot-solid.svg')
             ).add_to(mapa)
 
@@ -126,7 +125,6 @@ with tab1:
             folium.Marker(
                 location=j[0],
                 tooltip=html,
-                # icon=folium.Icon(color='blue', icon='info-sign')
                 icon=folium.Icon(color='orange', icon='location-dot-solid.svg')
             ).add_to(mapa)
 
@@ -140,7 +138,6 @@ with tab1:
             folium.Marker(
                 location=j[0],
                 tooltip=html,
-                # icon=folium.Icon(color='blue', icon='info-sign')
                 icon=folium.Icon(color='red', icon='location-dot-solid.svg')
             ).add_to(mapa)
 
