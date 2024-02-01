@@ -4,16 +4,17 @@ import json
 import pandas as pd
 from PIL import Image
 import plotly.express as px
+import folium
+from streamlit_folium import st_folium
+from municipiosES import municipios_lat_lon_acumulados
 
-img_1 = Image.open('logo_cepdec.png')
-st.set_page_config(page_title="Acumulados de Chuva", page_icon=img_1, layout='wide',
-                   initial_sidebar_state="expanded")
+img_1 = Image.open('img/logo_cepdec.png')
+st.set_page_config(page_title="Acumulados de Chuva", page_icon=img_1, layout='wide', initial_sidebar_state="expanded")
 
-img_2 = Image.open('cepdec.png')
+img_2 = Image.open('img/cepdec.png')
 st.image(img_2)
 
-img_3 = Image.open('icons8-chuva-100.png')
-st.sidebar.image(img_3)
+img_3 = Image.open('img/icon-chuva.png')
 
 
 def acumulados():
@@ -47,7 +48,7 @@ def acumulados():
     return maximos
 
 
-@st.cache
+@st.cache_data
 def convert_df(my_df):
     # IMPORTANT: Cache the conversion to prevent computation on every rerun
     return my_df.to_csv().encode('utf-8')
@@ -55,72 +56,124 @@ def convert_df(my_df):
 
 # ==========================================================================================
 # OBTENÇÃO DOS MÁXIMOS ATRAVÉS DA FUNÇÃO
-maximos1 = acumulados()
+maximos_1 = acumulados()
 
-indices = range(1, len(maximos1) + 1)
+indices = range(1, len(maximos_1) + 1)
 colunas = ['Município', '[mm]']
 
 # DATAFRAME DA LISTA
-df = pd.DataFrame(list(maximos1.items()), index=indices, columns=colunas)
-
-if 'df' not in st.session_state:
-    st.session_state['df'] = df
+df = pd.DataFrame(list(maximos_1.items()), index=indices, columns=colunas)
 
 # ORGANIZAÇÃO DOS DADOS PARA PLOT
 df_plot = df[0:20].sort_values(by='[mm]', ascending=True)
+
+coordenadas_acumulado = municipios_lat_lon_acumulados(df)
 
 # CONVERSÃO DOS DADOS PARA CSV
 file_csv = convert_df(df)
 
 # --------------------------------------------------------------------------------------------
 # APLICAÇÃO DOS DADOS NO STREAMLIT
+col1, col2 = st.columns([0.05, 0.95])
 
-st.title('ACUMULADOS DE CHUVA - CEMADEN')
-# st.text('Script para verificação dos maiores acumulados de chuva de '
-#         'cada município do ES no período de 24h')
+with col1:
+    st.image(img_3)
+
+with col2:
+    st.title('ACUMULADOS DE CHUVA - CEMADEN')
+
 st.text(
     """
     Script para verificação dos maiores acumulados de chuva de cada município do ES
      no período de 24h
     """
 )
-st.caption('Fonte dos dados: '  
+st.caption('Fonte dos dados: '
            'http://sjc.salvar.cemaden.gov.br/resources/graficos/interativo/grafico_CEMADEN.php?uf=ES#')
 
-st.sidebar.title('MENU')
+# CRIAÇÃO DE ABAS
+tab1, tab2, tab3, tab4 = st.tabs(["MAPA 🗺️", "GRÁFICO 📊", "LISTA DE ACUMULADOS 📋", "TABELA DE ACUMULADOS 📌"])
 
-itemSelecionado = st.sidebar.radio('Selecione o que deseja visualizar:',
-                                   ['Gráfico', 'Lista de Acumulados', 'Tabela de acumulados'],
-                                   )
+# ABA 01
+with tab1:
+    st.markdown('**Acumulados de chuva em 24h:**')
 
-if itemSelecionado == 'Gráfico':
+    mapa = folium.Map(location=(-19.5382, -40.6324), zoom_start=8)
 
-    if maximos1 != '':
+    for i, j in coordenadas_acumulado.items():
+
+        if j[1] <= 10:
+            html = f"""
+                <h5><b>{i}<b></h5>
+                <p>
+                    {j[1]} mm
+                 </p>
+                """
+            folium.Marker(
+                location=j[0],
+                tooltip=html,
+                # icon=folium.Icon(color='blue', icon='info-sign')
+                icon=folium.Icon(color='blue', icon='location-dot-solid.svg')
+            ).add_to(mapa)
+
+        elif 10 < j[1] <= 20:
+            html = f"""
+                    <h5><b>{i}<b></h5>
+                    <p>
+                        {j[1]} mm
+                     </p>
+                    """
+            folium.Marker(
+                location=j[0],
+                tooltip=html,
+                # icon=folium.Icon(color='blue', icon='info-sign')
+                icon=folium.Icon(color='orange', icon='location-dot-solid.svg')
+            ).add_to(mapa)
+
+        elif j[1] > 20:
+            html = f"""
+                    <h5><b>{i}<b></h5>
+                    <p>
+                        {j[1]} mm
+                     </p>
+                    """
+            folium.Marker(
+                location=j[0],
+                tooltip=html,
+                # icon=folium.Icon(color='blue', icon='info-sign')
+                icon=folium.Icon(color='red', icon='location-dot-solid.svg')
+            ).add_to(mapa)
+
+    st_data = st_folium(mapa, width=725)
+
+# ABA 02
+with tab2:
+    if maximos_1 != '':
 
         fig = px.bar(df_plot, x='[mm]', y="Município", title="Acumulados de chuva em 24h", height=750)
         st.plotly_chart(fig, use_container_width=True, theme="streamlit")
 
-    else:
+    elif maximos_1 == '':
         st.text('Sem acumulados de chuvas no momento!')
 
-elif itemSelecionado == 'Lista de Acumulados':
+# ABA 03
+with tab3:
+    if maximos_1 != '':
 
-    if maximos1 != '':
-
-        st.markdown('**Lista de acumulados de chuva em 24h:**')
-        for i, j in zip(maximos1, range(1, len(maximos1) + 1)):
-            item = '{}. {} - {} mm'.format(j, i, maximos1[i])
+        st.markdown('**Acumulados de chuva em 24h:**')
+        for i, j in zip(maximos_1, range(1, len(maximos_1) + 1)):
+            item = '{}. {} - {} mm'.format(j, i, maximos_1[i])
             st.text(item)
 
-    else:
+    elif maximos_1 == '':
         st.text('Sem acumulados de chuvas no momento!')
 
-elif itemSelecionado == 'Tabela de acumulados':
-
+# ABA 04
+with tab4:
     st.download_button(
         label="Download dos dados em CSV",
         data=file_csv,
-        file_name='Acumulados.csv',
+        file_name='Acumulados24h.csv',
         mime='text/csv')
 
     st.dataframe(df)
