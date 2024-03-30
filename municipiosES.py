@@ -48,7 +48,7 @@ def municipios_lat_lon_acumulados(df):
         "MARATAÍZES": (-21.0374, -40.8316),
         "MARECHAL FLORIANO": (-20.4157, -40.6715),
         "MARILÂNDIA": (-19.4118, -40.5413),
-        "MIMOSO DO SUL": (-20.6973, -41.3275),
+        "MIMOSO DO SUL": (-21.0661, -41.3679),
         "MONTANHA": (-18.1302, -40.3661),
         "MUCURICI": (-18.0973, -40.526),
         "MUNIZ FREIRE": (-20.4678, -41.4153),
