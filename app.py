@@ -20,7 +20,7 @@ img_3 = Image.open('img/icon-chuva.png')
 def acumulados():
     # CONSULTANDO OS DADOS ONLINE:
 
-    url = 'http://sjc.salvar.cemaden.gov.br/resources/graficos/interativo/getJson2.php?uf=ES'
+    url = 'http://salvar.cemaden.gov.br/resources/graficos/interativo/getJson2.php?uf=ES'
 
     headers = {'Content-type': 'application/json', 'Accept': 'application/json'}
 
@@ -89,7 +89,7 @@ st.text(
     """
 )
 st.caption('Fonte dos dados: '
-           'http://sjc.salvar.cemaden.gov.br/resources/graficos/interativo/grafico_CEMADEN.php?uf=ES#')
+           'http://salvar.cemaden.gov.br/resources/graficos/interativo/grafico_CEMADEN.php?uf=ES#')
 
 # CRIAÇÃO DE ABAS
 tab1, tab2, tab3, tab4 = st.tabs(["MAPA 🗺️", "GRÁFICO 📊", "LISTA DE ACUMULADOS 📋", "TABELA DE ACUMULADOS 📌"])
