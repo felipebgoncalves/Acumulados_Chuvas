@@ -1,0 +1,19 @@
+[project]
+name = "acumulados-chuvas"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Felipe B Gonçalves",email = "felipeb.goncalves@hotmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "streamlit (>=1.48.0,<2.0.0)",
+    "folium (>=0.20.0,<0.21.0)",
+    "streamlit-folium (>=0.25.1,<0.26.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
