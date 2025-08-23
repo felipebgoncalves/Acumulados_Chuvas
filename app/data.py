@@ -39,7 +39,7 @@ def acumulados():
     df = pd.DataFrame(list(maximos.items()), index=indices, columns=colunas)
 
     # Arredonda a coluna de acumulados para 2 casas decimais para consistência na exibição
-    df['[mm]'] = df['[mm]'].round(2)
+    # df['[mm]'] = df['[mm]'].round(2)
 
     # ORGANIZAÇÃO DOS DADOS PARA PLOT
     df_plot = df[0:40].sort_values(by='[mm]', ascending=False)
