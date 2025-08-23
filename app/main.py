@@ -119,4 +119,4 @@ def run():
                 st.text(item)
 
         else:
-            st.text('Sem acumulados de chuvas no momento!')
+            st.info('Sem acumulados de chuvas no momento!')
