@@ -13,8 +13,6 @@ def render_header():
     # Cria três colunas: a do meio será mais larga que as laterais
     col1, col2, col3 = st.columns([1, 6, 1])
 
-    # A coluna 1 (col1) e 3 (col3) ficam vazias, atuando como espaçamento
-    # Colocamos a imagem na coluna do meio (col2)
     with col2:
         st.image(img_2)
 
