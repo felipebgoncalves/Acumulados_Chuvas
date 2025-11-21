@@ -5,15 +5,14 @@ import streamlit as st
 @st.cache_data(ttl=600) # Cache por 10 minutos (600 segundos)
 def get_current_weather(latitude: str, longitude: str) -> dict | None:
     
-    try:
-        API_KEY = st.secrets["API_KEY"]
+    API_KEY = st.secrets["API_KEY"]
 
-    except KeyError:
-        st.error("A variável 'API_KEY' não foi encontrada nos segredos.")
-        st.info("Por favor, configure a chave de API nos segredos do seu app no Streamlit Cloud.")
+    if not API_KEY:
+        st.error("API_KEY não encontrada nos segredos.")
+        return None
 
-    url = f"https://weather.googleapis.com/v1/currentConditions:lookup?key={API_KEY}&location.latitude={latitude}&location.longitude={longitude}&languageCode=pt"
-
+    url = f"https://my.meteoblue.com/packages/basic-1h?lat={latitude}&lon={longitude}&apikey={API_KEY}&forecast_days=1&tz=America%2FSao_Paulo"
+    
     try:
         response = requests.get(url, timeout=10)
         response.raise_for_status()
