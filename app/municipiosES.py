@@ -94,7 +94,7 @@ def municipios_lat_lon_acumulados(df: pd.DataFrame) -> dict:
     # Verificar quais municípios do dicionário de coordenadas estão no DataFrame
     for municipio, coordenadas in COORDENADAS_ESPIRITO_SANTO.items():
         if municipio in df['Município'].values:
-            mm_value = df.loc[df['Município'] == municipio, '[mm]'].values[0]
+            mm_value = df.loc[df['Município'] == municipio, 'Prec_mm'].values[0]
             coordenadas_municipios_chuva[municipio] = coordenadas, mm_value
 
     return coordenadas_municipios_chuva

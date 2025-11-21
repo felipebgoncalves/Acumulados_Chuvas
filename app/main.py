@@ -15,7 +15,7 @@ def run():
     render_header()
 
     # DataFrame dos municipios que possuem acumulados no momento
-    df = data.acumulados()
+    df = data.join_acumulados(data.acumulados_cemaden(), data.acumulados_satdes())
 
     # CRIAÇÃO DE ABAS
     tab1, tab2 = st.tabs(["PRINCIPAL 📌", "LISTA DE ACUMULADOS 📋"])
@@ -90,7 +90,7 @@ def run():
                     height=altura_df,
                     hide_index=True,
                     column_config={
-                        "[mm]": st.column_config.NumberColumn(format="%.2f")
+                        "Prec_mm": st.column_config.NumberColumn(format="%.2f")
                     },
                 )
             else:
@@ -112,10 +112,11 @@ def run():
                 j = index + 1
                 # Acessamos os valores da linha pelos nomes das colunas
                 municipio = row['Município']
-                acumulado = row['[mm]']
+                acumulado = row['Prec_mm']
+                instituicao = row['Instituição']
 
                 # Formatamos a string como antes
-                item = '{}. {} - {} mm'.format(j, municipio, acumulado)
+                item = '{}. {} - {} mm - [{}]'.format(j, municipio, acumulado, instituicao)
                 st.text(item)
 
         else:
