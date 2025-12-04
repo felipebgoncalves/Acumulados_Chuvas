@@ -7,7 +7,6 @@ from app.codEstacoes import INMET, ANA, CEPDEC, INCAPER
 
 def acumulados_cemaden():
     # CONSULTANDO OS DADOS ONLINE:
-
     url = 'https://resources.cemaden.gov.br/graficos/interativo/getJson2.php?uf=ES'
 
     headers = {'Content-type': 'application/json', 'Accept': 'application/json'}
@@ -50,15 +49,16 @@ def acumulados_cemaden():
 
 
 def acumulados_satdes():
-    # Horário atual e 24h atrás
-    end_time = datetime.now(timezone.utc)
-    start_time = end_time - timedelta(hours=24)
+    # em UTC
+    agora_utc = datetime.now(timezone.utc)
+    inicio_utc = agora_utc - timedelta(hours=24)
 
-    start_str = start_time.strftime("%Y-%m-%dT%H:%M")
-    end_str = end_time.strftime("%Y-%m-%dT%H:%M")
+    # Gerar strings no formato da API (também em UTC)
+    start_str = inicio_utc.strftime("%Y-%m-%dT%H:%M")
+    end_str = agora_utc.strftime("%Y-%m-%dT%H:%M")
 
     url = f"https://satdes-backend.incaper.es.gov.br/api/v1/records/monitoring/map/{start_str}/{end_str}"
-
+    
     response = requests.get(url)
     data = response.json()
 
@@ -66,64 +66,78 @@ def acumulados_satdes():
 
     registros = []
 
-    for station_id, lista_medicoes in prec_dict.items():
-        for item in lista_medicoes:
+    for _, lista in prec_dict.items():
+        for item in lista:
 
-            if item.get("id_variable") == 15:
+            # pegar timestamp UTC vindo da API
+            date_utc_str = item.get("date_utc")
+            if not date_utc_str:
+                continue
 
-                codigo = item.get("name")
+            ts_utc = datetime.fromisoformat(date_utc_str.replace("Z", "+00:00"))
 
-                # # Substituir código pelo município e Determinar instituição
-                if codigo in INMET:
-                    instituicao = "INMET"
-                    municipio = INMET[codigo]
+            # filtrar somente dentro do intervalo UTC pedido
+            if not (inicio_utc <= ts_utc <= agora_utc):
+                continue
 
-                elif codigo in ANA:
-                    instituicao = "ANA"
-                    municipio = ANA[codigo]
+            # identificar um id único de estação 
+            id_estacao = item.get("id_station")
 
-                elif codigo in CEPDEC:
-                    instituicao = "CEPDEC"
-                    municipio = CEPDEC[codigo]
+            # pegar código/nome da estação (campo "name" contém ex: EMA_COL_01)
+            name = item.get("name")
 
-                elif codigo in INCAPER:
-                    instituicao = "INCAPER"
-                    municipio = INCAPER[codigo]
+            # identificar instituicao/municipio pelos dicionários (INMET, ANA, CEPDEC, INCAPER)
+            if name in INMET:
+                instituicao = "INMET"
+                municipio = INMET[name]
 
-                else:
-                    instituicao = "DESCONHECIDA"
-                    municipio = codigo  # mantém o código
+            elif name in ANA:
+                instituicao = "ANA"
+                municipio = ANA[name]
 
-                registros.append({
-                    "Município": municipio,
-                    "Prec_mm": item.get("instant", 0),
-                    "Instituição": instituicao
-                })                
+            elif name in CEPDEC:
+                instituicao = "CEPDEC"
+                municipio = CEPDEC[name]
+
+            elif name in INCAPER:
+                instituicao = "INCAPER"
+                municipio = INCAPER[name]
+
+            else:
+                instituicao = "DESCONHECIDA"
+                municipio = name
+
+            registros.append({
+                "id_estacao": id_estacao,
+                "Estacao": name,
+                "Município": municipio,
+                "Instituição": instituicao,
+                "Prec_mm": float(item.get("instant", 0))
+            })               
 
     # Criar DataFrame
     df = pd.DataFrame(registros)
 
-    # Se dataframe vier vazio, devolver vazio
+    # Se vazio, retorna estrutura vazia consistente
     if df.empty:
-        return pd.DataFrame(columns=["Município", "Prec_mm", "Instituição"])
+        return pd.DataFrame(columns=["id_estacao", "Estacao", "Município", "Prec_mm", "Instituição"])
 
-    # Agrupar corretamente por MUNICIPIO (e não station_name)
+    # SOMA APENAS POR ESTAÇÃO (chaves: id_estacao, Estacao, Instituição, Município)
+    # Isto garante que estações diferentes (mesmo município e/ou mesma instituição) não terão suas chuvas misturadas.
     df_satdes = (
-        df.groupby("Município").
-        agg({
-            "Prec_mm": "sum", 
-            "Instituição": lambda x: x.mode()[0] if len(x.mode()) > 0 else "DESCONHECIDA"})
-            .reset_index()
-            )
+        df.groupby(["id_estacao", "Estacao", "Município", "Instituição"], dropna=False)["Prec_mm"]
+          .sum()
+          .reset_index()
+    )
 
-     # FILTRAR SOMENTE PREC > 0
+    # filtrar apenas > 0 (estações com chuva)
     df_satdes = df_satdes[df_satdes["Prec_mm"] > 0]
-    
-    df_satdes['Prec_mm'] = df_satdes['Prec_mm'].round(2)
-    
-    # ORDENAR em ordem decrescente
-    df_satdes = df_satdes.sort_values(by="Prec_mm", ascending=False)
-   
+
+    # arredondar e ordenar
+    df_satdes["Prec_mm"] = df_satdes["Prec_mm"].round(2)
+    df_satdes = df_satdes.sort_values(by="Prec_mm", ascending=False).reset_index(drop=True)
+
+    df_satdes = df_satdes[["Município", "Prec_mm", "Instituição"]]
     return df_satdes
 
 
@@ -156,8 +170,103 @@ def join_acumulados(df1, df2):
 
 
 
+
+
+    agora_utc = datetime.now(timezone.utc)
+    inicio_utc = agora_utc - timedelta(hours=24)
+
+    start_str = inicio_utc.strftime("%Y-%m-%dT%H:%M")
+    end_str = agora_utc.strftime("%Y-%m-%dT%H:%M")
+
+    url = f"https://satdes-backend.incaper.es.gov.br/api/v1/records/monitoring/map/{start_str}/{end_str}"
+    response = requests.get(url)
+    data = response.json()
+
+    prec_dict = data.get("data", {}).get("prec", {})
+
+    registros = []
+
+    for station_key, lista in prec_dict.items():
+        for item in lista:
+
+            # Apenas precipitação
+            if item.get("id_variable") != 15:
+                continue
+
+            # ❌🔍 Ignorar estação da ANA
+            code = item.get("code", "")
+            name = item.get("name", "")
+
+            if (
+                code.startswith("ANA_") or 
+                name.startswith("ANA_") or
+                name in ANA  # mapeamento do seu dicionário
+            ):
+                continue  # pula completamente
+
+            # Timestamp
+            date_utc = item.get("date_utc")
+            if not date_utc:
+                continue
+
+            ts_utc = datetime.fromisoformat(date_utc.replace("Z", "+00:00"))
+
+            # Filtrar intervalo em UTC
+            if not (inicio_utc <= ts_utc <= agora_utc):
+                continue
+
+            # Identificador único da estação
+            id_estacao = item.get("id_station") or station_key or name
+
+            # Identificação da instituição/município
+            if name in INMET:
+                instituicao = "INMET"
+                municipio = INMET[name]
+
+            elif name in CEPDEC:
+                instituicao = "CEPDEC"
+                municipio = CEPDEC[name]
+
+            elif name in INCAPER:
+                instituicao = "INCAPER"
+                municipio = INCAPER[name]
+
+            else:
+                instituicao = "DESCONHECIDA"
+                municipio = name
+
+            registros.append({
+                "id_estacao": id_estacao,
+                "Estacao": name,
+                "Municipio": municipio,
+                "Instituicao": instituicao,
+                "Prec_mm": float(item.get("instant", 0))
+            })
+
+    df = pd.DataFrame(registros)
+
+    if df.empty:
+        return pd.DataFrame(columns=["id_estacao", "Estacao", "Municipio", "Instituicao", "Prec_mm"])
+
+    # Soma por estação (não mistura instituições nem estações)
+    df_estacao = (
+        df.groupby(["id_estacao", "Estacao", "Municipio", "Instituicao"], dropna=False)["Prec_mm"]
+          .sum()
+          .reset_index()
+    )
+
+    # Somente valores > 0
+    df_estacao = df_estacao[df_estacao["Prec_mm"] > 0]
+
+    df_estacao["Prec_mm"] = df_estacao["Prec_mm"].round(2)
+    df_estacao = df_estacao.sort_values(by="Prec_mm", ascending=False).reset_index(drop=True)
+
+    return df_estacao
+
+
+# --------------------
 # PARA TESTE DO MÓDULO
 # if __name__ == "__main__":
-    # pd.set_option("display.max_rows", None)
-    # print(join_acumulados(acumulados_cemaden(), acumulados_satdes()))
     
+#     pd.set_option("display.max_rows", None)
+#     print(join_acumulados(acumulados_cemaden(), acumulados_satdes()))
