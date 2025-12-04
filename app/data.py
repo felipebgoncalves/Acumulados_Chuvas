@@ -3,8 +3,7 @@ import requests
 import pandas as pd
 from datetime import datetime, timedelta, timezone
 
-# from app.codEstacoes import INMET, ANA, CEPDEC, INCAPER
-from codEstacoes import INMET, ANA, CEPDEC, INCAPER
+from app.codEstacoes import INMET, ANA, CEPDEC, INCAPER
 
 def acumulados_cemaden():
     # CONSULTANDO OS DADOS ONLINE:
