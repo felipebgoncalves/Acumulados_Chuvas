@@ -3,7 +3,8 @@ import requests
 import pandas as pd
 from datetime import datetime, timedelta, timezone
 
-from app.codEstacoes import INMET, ANA, CEPDEC, INCAPER
+# from app.codEstacoes import INMET, ANA, CEPDEC, INCAPER
+from codEstacoes import INMET, ANA, CEPDEC, INCAPER
 
 def acumulados_cemaden():
     # CONSULTANDO OS DADOS ONLINE:
@@ -68,6 +69,10 @@ def acumulados_satdes():
 
     for _, lista in prec_dict.items():
         for item in lista:
+
+            # ➤ EXCLUIR estações ANA
+            if "ANA" in item.get("code", ""):
+                continue
 
             # pegar timestamp UTC vindo da API
             date_utc_str = item.get("date_utc")
@@ -170,7 +175,7 @@ def join_acumulados(df1, df2):
 
 # --------------------
 # PARA TESTE DO MÓDULO
-# if __name__ == "__main__":
+if __name__ == "__main__":
     
-#     pd.set_option("display.max_rows", None)
-#     print(join_acumulados(acumulados_cemaden(), acumulados_satdes()))
+    pd.set_option("display.max_rows", None)
+    print(join_acumulados(acumulados_cemaden(), acumulados_satdes()))
