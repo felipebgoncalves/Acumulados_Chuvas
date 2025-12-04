@@ -41,7 +41,6 @@ def render_footer():
     
     # --- Previsão do tempo atual ---
     st.subheader(f"Condições Atuais em {municipio}/ES")
-    # st.subheader(f"Condições Atuais em {next(iter(dados_municipio))}/ES")
     
     # Coordenadas de exemplo para Colatina
     weather_data = get_current_weather(str(latitude), str(longitude))

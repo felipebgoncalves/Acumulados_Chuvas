@@ -1,9 +1,5 @@
 import pandas as pd
 
-
-# O dicionário é definido uma única vez como uma constante global.
-# Usar letras maiúsculas é uma convenção para constantes.
-
 COORDENADAS_ESPIRITO_SANTO = {
     "AFONSO CLÁUDIO": (-20.0761, -41.1252),
     "ÁGUIA BRANCA": (-18.9964, -40.7355),
@@ -88,7 +84,7 @@ COORDENADAS_ESPIRITO_SANTO = {
 
 def municipios_lat_lon_acumulados(df: pd.DataFrame) -> dict:
 
-    # Novo dicionário para armazenar as coordenadas geográficas dos municípios
+    # dicionário para armazenar as coordenadas geográficas dos municípios
     coordenadas_municipios_chuva = {}
 
     # Verificar quais municípios do dicionário de coordenadas estão no DataFrame

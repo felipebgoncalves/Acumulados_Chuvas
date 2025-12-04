@@ -75,7 +75,6 @@ def run():
 
 
         with col2:
-
             # TABELA
             st.subheader("Ranking de Acumulados")
 
@@ -113,10 +112,11 @@ def run():
                 # Acessamos os valores da linha pelos nomes das colunas
                 municipio = row['Município']
                 acumulado = row['Prec_mm']
-                instituicao = row['Instituição']
+                # instituicao = row['Instituição']
 
                 # Formatamos a string como antes
-                item = '{}. {} - {} mm - [{}]'.format(j, municipio, acumulado, instituicao)
+                # item = '{}. {} - {} mm - [{}]'.format(j, municipio, acumulado, instituicao)
+                item = '{}. {} - {} mm'.format(j, municipio, acumulado)
                 st.text(item)
 
         else:
