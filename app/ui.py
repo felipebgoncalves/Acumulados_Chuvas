@@ -77,7 +77,7 @@ def render_footer():
 
     st.success("Dados meteorológicos atualizados:")
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
 
     with col1:
         st.metric("🌡️ Temperatura", f"{resultado['temperatura_C']}°C")
@@ -90,6 +90,9 @@ def render_footer():
 
     with col4:
         st.metric("🌧️ Prob. Chuva", f"{resultado['prob_chuva_%']}%")
+
+    with col5:
+        st.metric("🌧️ Precipitação", f"{resultado['precipitacao_mm']} mm")
 
     st.markdown("---")
     st.caption("Deploy do aplicativo com Streamlit.")

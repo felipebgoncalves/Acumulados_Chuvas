@@ -95,9 +95,9 @@ def acumulados_satdes():
                 instituicao = "INMET"
                 municipio = INMET[name]
 
-            elif name in ANA:
-                instituicao = "ANA"
-                municipio = ANA[name]
+            # elif name in ANA:
+            #     instituicao = "ANA"
+            #     municipio = ANA[name]
 
             elif name in CEPDEC:
                 instituicao = "CEPDEC"
@@ -174,7 +174,7 @@ def join_acumulados(df1, df2):
 
 # --------------------
 # PARA TESTE DO MÓDULO
-if __name__ == "__main__":
+# if __name__ == "__main__":
     
-    pd.set_option("display.max_rows", None)
-    print(join_acumulados(acumulados_cemaden(), acumulados_satdes()))
+#     pd.set_option("display.max_rows", None)
+#     print(join_acumulados(acumulados_cemaden(), acumulados_satdes()))
