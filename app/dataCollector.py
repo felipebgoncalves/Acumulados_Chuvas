@@ -4,8 +4,8 @@ import pandas as pd
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from codEstacoes import INMET, ANA, CEPDEC, INCAPER
-# from app.codEstacoes import INMET, ANA, CEPDEC, INCAPER
+# from codEstacoes import INMET, ANA, CEPDEC, INCAPER
+from app.codEstacoes import INMET, ANA, CEPDEC, INCAPER
 
 class DataCollector:
     """Classe base para todos os coletores de acumulados."""
@@ -283,30 +283,30 @@ class Joiner:
 # =====================
 # TESTE DO MÓDULO
 # =====================
-from dotenv import load_dotenv
-import os
+# from dotenv import load_dotenv
+# import os
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
     
-    pd.set_option("display.max_rows", None)
+#     pd.set_option("display.max_rows", None)
 
-    load_dotenv()
+#     load_dotenv()
 
-    identificador = os.getenv("ANA_ID")
-    senha = os.getenv("ANA_PWD")
+#     identificador = os.getenv("ANA_ID")
+#     senha = os.getenv("ANA_PWD")
 
-    cemaden = CemadenCollector()
-    satdes = SatdesCollector()
-    ana = AnaCollector(
-        identificador=identificador,
-        senha=senha,
-        estacoes_dict=ANA
-    )
+#     cemaden = CemadenCollector()
+#     satdes = SatdesCollector()
+#     ana = AnaCollector(
+#         identificador=identificador,
+#         senha=senha,
+#         estacoes_dict=ANA
+#     )
 
-    df_cemaden = cemaden.get_dataframe()
-    df_satdes  = satdes.get_dataframe()
-    df_ana = ana.fetch()
+#     df_cemaden = cemaden.get_dataframe()
+#     df_satdes  = satdes.get_dataframe()
+#     df_ana = ana.fetch()
 
-    df_final = Joiner.join(df_cemaden, df_satdes, df_ana)
+#     df_final = Joiner.join(df_cemaden, df_satdes, df_ana)
 
-    print(df_final)
+#     print(df_final)
