@@ -6,7 +6,28 @@ from PIL import Image
 
 from app.municipiosES import municipios_lat_lon_acumulados as coordenadas_acumulado
 from app.ui import render_header, render_footer
-from app import data
+from app.dataCollector import CemadenCollector, SatdesCollector, AnaCollector, Joiner
+from app.codEstacoes import ANA
+
+
+def carregar_acumulados():
+    identificador = st.secrets["ANA_ID"]
+    senha = st.secrets["ANA_PWD"]
+
+    cemaden = CemadenCollector()
+    satdes = SatdesCollector()
+    ana = AnaCollector(
+        identificador=identificador,
+        senha=senha,
+        estacoes_dict=ANA
+    )
+
+    df_cemaden = cemaden.get_dataframe()
+    df_satdes  = satdes.get_dataframe()
+    df_ana = ana.fetch()
+
+    # DataFrame dos municipios que possuem acumulados no momento
+    return Joiner.join(df_cemaden, df_satdes, df_ana)
 
 def run():
     img_1 = Image.open('img/logo_cepdec.png')
@@ -15,7 +36,7 @@ def run():
     render_header()
 
     # DataFrame dos municipios que possuem acumulados no momento
-    df = data.join_acumulados(data.acumulados_cemaden(), data.acumulados_satdes())
+    df = carregar_acumulados()
 
     # CRIAÇÃO DE ABAS
     tab1, tab2 = st.tabs(["PRINCIPAL 📌", "LISTA DE ACUMULADOS 📋"])
@@ -84,6 +105,7 @@ def run():
                 # 2. `height` é calculado para exibir todas as linhas sem barra de rolagem.
                 # 3. `hide_index=True` remove a coluna de índice para um visual mais limpo.
                 altura_df = (len(df) + 1) * 35 + 3
+                
                 st.dataframe(
                     df,
                     height=altura_df,
@@ -109,6 +131,7 @@ def run():
             for index, row in df.iterrows():
                 # Criamos o contador 'j' somando 1 ao índice
                 j = index + 1
+                
                 # Acessamos os valores da linha pelos nomes das colunas
                 municipio = row['Município']
                 acumulado = row['Prec_mm']

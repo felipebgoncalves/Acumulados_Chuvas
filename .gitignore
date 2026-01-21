@@ -1,7 +1,5 @@
 .streamlit/secrets.toml
 .env
-app/dataCollector.py
-app/z_teste.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
