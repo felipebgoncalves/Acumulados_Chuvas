@@ -1,3 +1,4 @@
+import streamlit as st
 import requests
 import pandas as pd
 from datetime import datetime, timedelta, timezone
@@ -126,6 +127,29 @@ class SatdesCollector(DataCollector):
         return df[["Município", "Prec_mm", "Instituição"]]
 
 
+@st.cache_resource(ttl=900)  # 15 minutos
+def obter_token_ana(identificador: str, senha: str) -> str:
+    """
+    Obtém e mantém em cache o token da ANA por 15 minutos.
+    """
+    url = "https://www.ana.gov.br/hidrowebservice/EstacoesTelemetricas/OAUth/v1"
+
+    headers = {
+        "Identificador": identificador,
+        "Senha": senha,
+    }
+
+    r = requests.get(url, headers=headers, timeout=30)
+    r.raise_for_status()
+
+    token = r.json().get("items", {}).get("tokenautenticacao")
+
+    if not token:
+        raise RuntimeError("Token ANA não retornado pela API.")
+
+    return token
+
+
 class AnaCollector(DataCollector):
     
     BASE_URL = "https://www.ana.gov.br/hidrowebservice/EstacoesTelemetricas"
@@ -135,35 +159,7 @@ class AnaCollector(DataCollector):
         self.senha = senha
         self.estacoes = estacoes_dict
         self.max_workers = max_workers
-        self.token = None
-        self.token_time = None
 
-    # =========
-    # TOKEN (thread-safe)
-    # ========
-    def _token_valido(self):
-        return (
-            self.token is not None and
-            datetime.now() < self.token_time + timedelta(minutes=15)
-        )
-    
-    def _obter_token(self):
-        url = f"{self.BASE_URL}/OAUth/v1"
-        headers = {
-            "Identificador": self.identificador,
-            "Senha": self.senha
-            }
-
-        r = requests.get(url, headers=headers, timeout=30).json()
-        self.token = r.get("items", {}).get("tokenautenticacao")
-        self.token_time = datetime.now()
-
-    def _get_token_once(self):
-        """Obtém o token uma única vez antes das threads."""
-        if not self._token_valido():
-            self._obter_token()
-        return self.token
-    
     # ===================
     # CONSULTA INDIVIDUAL
     # ===================
@@ -199,7 +195,7 @@ class AnaCollector(DataCollector):
         registros = []
 
         # Token obtido apenas uma vez
-        token = self._get_token_once()
+        token = obter_token_ana(self.identificador, self.senha)
 
         # Chamadas paralelas
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:

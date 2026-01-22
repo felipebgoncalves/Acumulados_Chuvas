@@ -5,26 +5,40 @@ import folium
 from PIL import Image
 
 from app.municipiosES import municipios_lat_lon_acumulados as coordenadas_acumulado
-from app.ui import render_header, render_footer
+from app.render_header_footer import render_header, render_footer
 from app.dataCollector import CemadenCollector, SatdesCollector, AnaCollector, Joiner
 from app.codEstacoes import ANA
 
+# cache CEMADEN
+@st.cache_data(ttl=120, show_spinner="Buscando dados do CEMADEN...")
+def load_cemaden():
+    return CemadenCollector().get_dataframe()
 
-def carregar_acumulados():
-    identificador = st.secrets["ANA_ID"]
-    senha = st.secrets["ANA_PWD"]
+# cache SATDES
+@st.cache_data(ttl=120, show_spinner="Buscando dados do CEPDEC e INMET...")
+def load_satdes():
+    return SatdesCollector().get_dataframe()
 
-    cemaden = CemadenCollector()
-    satdes = SatdesCollector()
-    ana = AnaCollector(
+# cache ANA
+@st.cache_data(ttl=120, show_spinner="Buscando dados da ANA...")
+def load_ana(identificador: str, senha: str):
+    st.write("⏱️ Dados ANA carregados")
+    
+    collector = AnaCollector(
         identificador=identificador,
         senha=senha,
-        estacoes_dict=ANA
+        estacoes_dict=ANA,
+        max_workers=8  # recomendado para Streamlit
     )
+    return collector.fetch()
 
-    df_cemaden = cemaden.get_dataframe()
-    df_satdes  = satdes.get_dataframe()
-    df_ana = ana.fetch()
+
+
+def carregar_acumulados():
+    
+    df_cemaden = load_cemaden()
+    df_satdes  = load_satdes()
+    df_ana     = load_ana(st.secrets["ANA_ID"], st.secrets["ANA_PWD"])
 
     # DataFrame dos municipios que possuem acumulados no momento
     return Joiner.join(df_cemaden, df_satdes, df_ana)
@@ -117,7 +131,6 @@ def run():
             else:
                 st.info("Sem dados para exibir.")
 
-        render_footer()
 
     # ABA 2
     with tab2:
@@ -144,3 +157,5 @@ def run():
 
         else:
             st.info('Sem acumulados de chuvas no momento!')
+
+    render_footer()
