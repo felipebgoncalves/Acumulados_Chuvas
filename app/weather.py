@@ -1,5 +1,7 @@
+from tkinter import Image
 import requests
 import streamlit as st
+from PIL import Image
 
 @st.cache_data(ttl=600) # Cache por 10 minutos (600 segundos)
 def get_current_weather(latitude: str, longitude: str) -> dict | None:
@@ -18,5 +20,5 @@ def get_current_weather(latitude: str, longitude: str) -> dict | None:
         return response.json()
     
     except requests.exceptions.RequestException as e:
-        st.warning(f"Não foi possível buscar os dados do tempo: {e}")
+        st.warning(f"Não foi possível buscar os dados do tempo: \n\n{e}")
         return None

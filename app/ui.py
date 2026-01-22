@@ -19,8 +19,11 @@ def render_header():
     
     st.text("Script para verificação dos maiores acumulados de chuva de cada município do ES no período de 24h")
     
-    st.caption('Fonte dos dados: http://www2.cemaden.gov.br/mapainterativo/# & https://satdes.incaper.es.gov.br')
-        
+    st.caption('Fonte dos dados:')
+    st.caption('CEMADEN [http://www2.cemaden.gov.br/mapainterativo/#]')
+    st.caption('ANA [https://www.snirh.gov.br/hidrotelemetria/Mapa.aspx]')
+    st.caption('SATDES [https://satdes.incaper.es.gov.br]')
+
     st.markdown("---")
 
 
@@ -41,7 +44,7 @@ def render_footer():
     # # --- Previsão do tempo atual ---
     # st.subheader(f"Condições Atuais em {municipio}/ES")
     
-    # Coordenadas de exemplo para Colatina
+    # # Coordenadas de exemplo para Colatina
     # weather_data = get_current_weather(str(latitude), str(longitude))
     
     # if not weather_data:

@@ -1,6 +1,12 @@
 .streamlit/secrets.toml
 .env
 
+/testes
+/testes/__pycache__/
+/testes/*.py
+
+/app/__pycache__/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

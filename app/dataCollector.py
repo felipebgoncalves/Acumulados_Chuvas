@@ -1,11 +1,22 @@
-import json
 import requests
 import pandas as pd
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dateutil.parser import parse
 
-# from codEstacoes import INMET, ANA, CEPDEC, INCAPER
 from app.codEstacoes import INMET, ANA, CEPDEC, INCAPER
+
+# ==============================
+# Mapa unificado de estações
+# ==============================
+
+MAPA_ESTACOES = {
+    **{k: ("INMET", v) for k, v in INMET.items()},
+    **{k: ("CEPDEC", v) for k, v in CEPDEC.items()},
+    **{k: ("INCAPER", v) for k, v in INCAPER.items()},
+}
+
 
 class DataCollector:
     """Classe base para todos os coletores de acumulados."""
@@ -23,104 +34,74 @@ class DataCollector:
 
 class CemadenCollector(DataCollector):
 
-    URL = "https://resources.cemaden.gov.br/graficos/interativo/getJson2.php?uf=ES"
+    BASE_URL = "https://resources.cemaden.gov.br/graficos/interativo/getJson2.php?uf=ES"
 
     def fetch(self):
         headers = {'Content-type': 'application/json', 'Accept': 'application/json'}
-        response = requests.get(self.URL, headers=headers)
-        return json.loads(response.text)
+        response = requests.get(self.BASE_URL, headers=headers, timeout=30)
+        return response.json()
 
-    def process(self, text):
-        # Remover sem dados
-        data = [x for x in text if x['acc24hr'] != '-']
+    def process(self, data):
+        
+        df = pd.DataFrame(data)
 
-        # Remover negativos
-        data = [x for x in data if x['acc24hr'] >= 0]
-
-        # Remover duplicados por município -> maior valor
-        maximos = {}
-        for item in data:
-            mun = item['cidade']
-            val = item['acc24hr']
-            if mun not in maximos or val > maximos[mun]:
-                maximos[mun] = val
-
-        # Ordenar
-        maximos = dict(sorted(maximos.items(), key=lambda x: x[1], reverse=True))
-
-        df = pd.DataFrame(
-            list(maximos.items()),
-            index=range(1, len(maximos)+1),
-            columns=["Município", "Prec_mm"]
+        df = (
+            df[df["acc24hr"] != "-"]
+            .assign(acc24hr=lambda x: x["acc24hr"].astype(float))
+            .query("acc24hr >= 0")
+            .groupby("cidade", as_index=False)["acc24hr"]
+            .max()
+            .rename(columns={"cidade": "Município", "acc24hr": "Prec_mm"})
         )
 
         df["Instituição"] = "CEMADEN"
         df["Prec_mm"] = df["Prec_mm"].round(2)
 
-        return df.sort_values(by="Prec_mm", ascending=False).reset_index(drop=True)
-    
+        return df
+
 
 class SatdesCollector(DataCollector):
 
     BASE_URL = "https://satdes-backend.incaper.es.gov.br/api/v1/records/monitoring/map"
 
     def fetch(self):
-        agora_utc = datetime.now(timezone.utc)
-        inicio_utc = agora_utc - timedelta(hours=24)
+        end_utc = datetime.now(timezone.utc)
+        start_utc = end_utc - timedelta(hours=24)
 
-        start_str = inicio_utc.strftime("%Y-%m-%dT%H:%M")
-        end_str = agora_utc.strftime("%Y-%m-%dT%H:%M")
+        url = f"{self.BASE_URL}/{start_utc.strftime("%Y-%m-%dT%H:%M")}/{end_utc.strftime("%Y-%m-%dT%H:%M")}"
 
-        url = f"{self.BASE_URL}/{start_str}/{end_str}"
-
-        response = requests.get(url)
-        return response.json(), inicio_utc, agora_utc
+        response = requests.get(url, timeout=30)
+        
+        return response.json(), start_utc, end_utc
 
     def process(self, payload):
-        data, inicio_utc, agora_utc = payload
-
-        prec_dict = data["data"]["prec"]
+        
+        data, start_utc, end_utc = payload
+        
         registros = []
 
-        for _, lista in prec_dict.items():
+        for lista in data["data"]["prec"].values():
             for item in lista:
 
-                # excluir ANA
                 if "ANA" in item.get("code", ""):
                     continue
 
-                date_utc_str = item.get("date_utc")
-                if not date_utc_str:
+                date_utc = item.get("date_utc")
+                if not date_utc:
                     continue
 
-                ts_utc = datetime.fromisoformat(date_utc_str.replace("Z", "+00:00"))
+                ts_utc = datetime.fromisoformat(
+                    date_utc.replace("Z", "+00:00")
+                )
 
-                if not (inicio_utc <= ts_utc <= agora_utc):
+                if not (start_utc <= ts_utc <= end_utc):
                     continue
 
-                id_estacao = item.get("id_station")
                 name = item.get("name")
-
-                # descobrir instituição
-                if name in INMET:
-                    inst = "INMET"
-                    muni = INMET[name]
-                # elif name in ANA:
-                #     inst = "ANA"
-                #     muni = ANA[name]
-                elif name in CEPDEC:
-                    inst = "CEPDEC"
-                    muni = CEPDEC[name]
-                elif name in INCAPER:
-                    inst = "INCAPER"
-                    muni = INCAPER[name]
-                else:
-                    inst = "DESCONHECIDA"
-                    muni = name
+                inst, muni = MAPA_ESTACOES.get(name, ("DESCONHECIDA", name))
 
                 registros.append({
-                    "id_estacao": id_estacao,
-                    "Estacao": name,
+                    "id_estacao": item.get("id_station"),
                     "Município": muni,
                     "Instituição": inst,
                     "Prec_mm": float(item.get("instant", 0))
@@ -131,38 +112,40 @@ class SatdesCollector(DataCollector):
         if df.empty:
             return pd.DataFrame(columns=["Município", "Prec_mm", "Instituição"])
 
-        df_satdes = (
-            df.groupby(["id_estacao", "Estacao", "Município", "Instituição"])["Prec_mm"]
-              .sum()
-              .reset_index()
+        df = (
+            df.groupby(
+                ["id_estacao", "Município", "Instituição"],
+                as_index=False
+            )["Prec_mm"]
+            .sum()
         )
 
-        df_satdes = df_satdes[df_satdes["Prec_mm"] > 0]
-        df_satdes["Prec_mm"] = df_satdes["Prec_mm"].round(2)
+        df = df[df["Prec_mm"] > 0]
+        df["Prec_mm"] = df["Prec_mm"].round(2)
 
-        df_satdes = df_satdes.sort_values(by="Prec_mm", ascending=False)
-        df_satdes = df_satdes.reset_index(drop=True)
-
-        return df_satdes[["Município", "Prec_mm", "Instituição"]]
+        return df[["Município", "Prec_mm", "Instituição"]]
 
 
 class AnaCollector(DataCollector):
+    
     BASE_URL = "https://www.ana.gov.br/hidrowebservice/EstacoesTelemetricas"
 
-    def __init__(self, identificador, senha, estacoes_dict):
+    def __init__(self, identificador, senha, estacoes_dict, max_workers=8):
         self.identificador = identificador
         self.senha = senha
         self.estacoes = estacoes_dict
+        self.max_workers = max_workers
         self.token = None
         self.token_time = None
 
     # =========
-    # TOKEN
+    # TOKEN (thread-safe)
     # ========
     def _token_valido(self):
-        if self.token is None:
-            return False
-        return datetime.now() < self.token_time + timedelta(minutes=15)
+        return (
+            self.token is not None and
+            datetime.now() < self.token_time + timedelta(minutes=15)
+        )
     
     def _obter_token(self):
         url = f"{self.BASE_URL}/OAUth/v1"
@@ -170,11 +153,13 @@ class AnaCollector(DataCollector):
             "Identificador": self.identificador,
             "Senha": self.senha
             }
-        r = requests.get(url, headers=headers).json()
+
+        r = requests.get(url, headers=headers, timeout=30).json()
         self.token = r.get("items", {}).get("tokenautenticacao")
         self.token_time = datetime.now()
 
-    def _get_token(self):
+    def _get_token_once(self):
+        """Obtém o token uma única vez antes das threads."""
         if not self._token_valido():
             self._obter_token()
         return self.token
@@ -182,8 +167,8 @@ class AnaCollector(DataCollector):
     # ===================
     # CONSULTA INDIVIDUAL
     # ===================
-    def _consulta_estacao(self, codigo):
-        token = self._get_token()
+    def _consulta_estacao(self, codigo, token):
+        
         data_busca = datetime.now().strftime("%Y-%m-%d")
 
         url = (
@@ -198,115 +183,103 @@ class AnaCollector(DataCollector):
             "Authorization": f"Bearer {token}"
             }
 
-        r = requests.get(url, headers=headers)
-        return r.json()
+        r = requests.get(url, headers=headers, timeout=30)
+        return codigo, r.json()
     
     # =====================================
-    # SOMA DOS ÚLTIMOS 24h
+    # SOMA DOS ÚLTIMOS 24h - FETCH (PARALELIZADO)
     # =====================================
     def fetch(self):
-        """Consulta todas as estações e retorna DataFrame final."""
+        
         tz_brt = ZoneInfo("America/Sao_Paulo")
 
-        agora_utc = datetime.now(timezone.utc)
-        inicio_utc = agora_utc - timedelta(hours=24)
+        end_utc = datetime.now(timezone.utc)
+        start_utc = end_utc - timedelta(hours=24)
 
         registros = []
 
-        for cod, muni in self.estacoes.items():
+        # Token obtido apenas uma vez
+        token = self._get_token_once()
 
-            try:
-                print(f"codigo {cod}, municipio {muni}")
-                payload = self._consulta_estacao(cod)
-                items = payload.get("items", [])
+        # Chamadas paralelas
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
 
-                soma = 0.0
+            futures = {
+                executor.submit(self._consulta_estacao, cod, token): (cod, muni)
+                for cod, muni in self.estacoes.items()
+            }
 
-                for item in items:
-                    data_str = item.get("Data_Hora_Medicao")
-                    if not data_str:
-                        continue
+            for future in as_completed(futures):
 
-                    ts = datetime.fromisoformat(data_str.replace(" ", "T")).replace(tzinfo=tz_brt).astimezone(timezone.utc)
+                cod, muni = futures[future]
 
-                    if inicio_utc <= ts <= agora_utc:
-                        chuva = float(item.get("Chuva_Adotada", 0) or 0)
-                        soma += chuva
+                try:
+                    _, payload = future.result()
+                    items = payload.get("items", [])
 
-                if soma > 0:
-                    print(f"  soma: {soma}")
-                    registros.append({
-                        "Estacao": cod,
-                        "Município": muni,
-                        "Instituição": "ANA",
-                        "Prec_mm": round(soma, 2)
-                    })
+                    soma = 0.0
 
-            except Exception as e:
-                print(f"Erro na estação {cod}: {e}")
+                    for item in items:
+                        data_str = item.get("Data_Hora_Medicao")
+                        if not data_str:
+                            continue
 
-                continue
+                        try:
+                            ts = parse(data_str)
+                            ts = ts.replace(tzinfo=tz_brt).astimezone(timezone.utc)
+                        except Exception:
+                            continue
+
+                        if not (start_utc <= ts <= end_utc):
+                            continue
+
+                        soma += float(item.get("Chuva_Adotada") or 0)
+
+                    if soma > 0:
+                        registros.append({
+                            "Estacao": cod,
+                            "Município": muni,
+                            "Instituição": "ANA",
+                            "Prec_mm": round(soma, 2)
+                        })
+
+                except Exception as e:
+                    print(f"Erro na estação {cod}: {e}")
 
         # DataFrame final
         if not registros:
             return pd.DataFrame(columns=["Município", "Prec_mm", "Instituição"])
 
-        df = pd.DataFrame(registros)
-        df_ana = df.sort_values(by="Prec_mm", ascending=False).reset_index(drop=True)
+        df = (
+            pd.DataFrame(registros)
+              .sort_values(by="Prec_mm", ascending=False)
+              .reset_index(drop=True)
+        )
 
-        # return df_ana[["Município", "Prec_mm", "Instituição", "Estacao"]]
-        return df_ana[["Município", "Prec_mm", "Instituição"]]
+        return df[["Município", "Prec_mm", "Instituição"]]
 
 
 class Joiner:
 
     @staticmethod
-    def join(df1, df2, df3):
-
-        df1 = df1[["Município", "Prec_mm", "Instituição"]]
-        df2 = df2[["Município", "Prec_mm", "Instituição"]]
-        df3 = df3[["Município", "Prec_mm", "Instituição"]]
-
-        df = pd.concat([df1, df2, df3], ignore_index=True)
+    def join(*dfs):
         
+        # Concatena todos os DataFrames recebidos
+        df = pd.concat(
+            [
+                df_[["Município", "Prec_mm", "Instituição"]]
+                for df_ in dfs
+            ],
+            ignore_index=True
+        )
+        
+        # Filtra apenas valores positivos
         df = df[df["Prec_mm"] > 0]
 
         df_plot = (
-            df.loc[df.groupby("Município")["Prec_mm"].idxmax()]
-            .sort_values(by="Prec_mm", ascending=False)
-            .reset_index(drop=True)
+            df.sort_values("Prec_mm", ascending=False)
+              .drop_duplicates("Município")
+              .reset_index(drop=True)
         )
 
         return df_plot
-
-
-# =====================
-# TESTE DO MÓDULO
-# =====================
-# from dotenv import load_dotenv
-# import os
-
-# if __name__ == "__main__":
-    
-#     pd.set_option("display.max_rows", None)
-
-#     load_dotenv()
-
-#     identificador = os.getenv("ANA_ID")
-#     senha = os.getenv("ANA_PWD")
-
-#     cemaden = CemadenCollector()
-#     satdes = SatdesCollector()
-#     ana = AnaCollector(
-#         identificador=identificador,
-#         senha=senha,
-#         estacoes_dict=ANA
-#     )
-
-#     df_cemaden = cemaden.get_dataframe()
-#     df_satdes  = satdes.get_dataframe()
-#     df_ana = ana.fetch()
-
-#     df_final = Joiner.join(df_cemaden, df_satdes, df_ana)
-
-#     print(df_final)
