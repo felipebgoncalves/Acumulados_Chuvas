@@ -5,8 +5,13 @@ from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dateutil.parser import parse
+import certifi
+import urllib3
 
-from app.codEstacoes import INMET, ANA, CEPDEC, INCAPER
+from codEstacoes import INMET, ANA, CEPDEC, INCAPER
+# from app.codEstacoes import INMET, ANA, CEPDEC, INCAPER
+
+urllib3.disable_warnings()
 
 # ==============================
 # Mapa unificado de estações
@@ -38,8 +43,10 @@ class CemadenCollector(DataCollector):
     BASE_URL = "https://resources.cemaden.gov.br/graficos/interativo/getJson2.php?uf=ES"
 
     def fetch(self):
-        headers = {'Content-type': 'application/json', 'Accept': 'application/json'}
-        response = requests.get(self.BASE_URL, headers=headers, timeout=30)
+        headers = {'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(self.BASE_URL, headers=headers, timeout=30, verify=False)
+        response.raise_for_status()
+
         return response.json()
 
     def process(self, data):

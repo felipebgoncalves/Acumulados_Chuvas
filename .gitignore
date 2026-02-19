@@ -4,6 +4,7 @@
 /testes
 /testes/__pycache__/
 /testes/*.py
+app/dataTeste.py
 
 /app/__pycache__/
 
