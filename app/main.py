@@ -36,12 +36,97 @@ def load_ana(identificador: str, senha: str):
 
 def carregar_acumulados():
     
-    df_cemaden = load_cemaden()
-    df_satdes  = load_satdes()
-    df_ana     = load_ana(st.secrets["ANA_ID"], st.secrets["ANA_PWD"])
+    # df_cemaden = load_cemaden()
+    # df_satdes  = load_satdes()
+    # df_ana     = load_ana(st.secrets["ANA_ID"], st.secrets["ANA_PWD"])
 
-    # DataFrame dos municipios que possuem acumulados no momento
-    return Joiner.join(df_cemaden, df_satdes, df_ana)
+    # # DataFrame dos municipios que possuem acumulados no momento
+    # return Joiner.join(df_cemaden, df_satdes, df_ana)
+
+    dfs = []
+
+    # ========================
+    # CEMADEN
+    # ========================
+    try:
+
+        df_cemaden = load_cemaden()
+
+        if df_cemaden is None or df_cemaden.empty:
+            st.warning("⚠️ CEMADEN não retornou dados.")
+            df_cemaden = pd.DataFrame(columns=["Município", "Prec_mm", "Instituição"])
+
+        dfs.append(df_cemaden)
+
+    except Exception as e:
+
+        st.error(f"❌ Erro ao carregar dados do CEMADEN: {e}")
+
+        dfs.append(
+            pd.DataFrame(columns=["Município", "Prec_mm", "Instituição"])
+        )
+
+
+    # ========================
+    # SATDES
+    # ========================
+    try:
+
+        df_satdes = load_satdes()
+
+        if df_satdes is None or df_satdes.empty:
+            st.warning("⚠️ SATDES não retornou dados.")
+            df_satdes = pd.DataFrame(columns=["Município", "Prec_mm", "Instituição"])
+
+        dfs.append(df_satdes)
+
+    except Exception as e:
+
+        st.error(f"❌ Erro ao carregar dados do SATDES: {e}")
+
+        dfs.append(
+            pd.DataFrame(columns=["Município", "Prec_mm", "Instituição"])
+        )
+
+
+    # ========================
+    # ANA
+    # ========================
+    try:
+
+        df_ana = load_ana(
+            st.secrets["ANA_ID"],
+            st.secrets["ANA_PWD"]
+        )
+
+        if df_ana is None or df_ana.empty:
+            st.warning("⚠️ ANA não retornou dados.")
+            df_ana = pd.DataFrame(columns=["Município", "Prec_mm", "Instituição"])
+
+        dfs.append(df_ana)
+
+    except Exception as e:
+
+        st.error(f"❌ Erro ao carregar dados da ANA: {e}")
+
+        dfs.append(
+            pd.DataFrame(columns=["Município", "Prec_mm", "Instituição"])
+        )
+
+
+    # ========================
+    # JOIN FINAL
+    # ========================
+    try:
+
+        df_final = Joiner.join(*dfs)
+        return df_final
+
+    except Exception as e:
+
+        st.error(f"❌ Erro ao unir dados: {e}")
+        return pd.DataFrame(columns=["Município", "Prec_mm", "Instituição"])
+
 
 def run():
     img_1 = Image.open('img/logo_cepdec.png')
