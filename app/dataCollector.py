@@ -8,8 +8,7 @@ from dateutil.parser import parse
 import certifi
 import urllib3
 
-from codEstacoes import INMET, ANA, CEPDEC, INCAPER
-# from app.codEstacoes import INMET, ANA, CEPDEC, INCAPER
+from app.codEstacoes import INMET, ANA, CEPDEC, INCAPER
 
 urllib3.disable_warnings()
 
