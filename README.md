@@ -3,5 +3,3 @@ Projeto de web scrapping desenvolvido para filtro das informações dos pluviôm
 
 
 Deploy do projeto utilizando Streamlit
-
-https://chuvas24h.streamlit.app/
