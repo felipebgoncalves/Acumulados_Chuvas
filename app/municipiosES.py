@@ -84,14 +84,25 @@ COORDENADAS_ESPIRITO_SANTO = {
 
 def municipios_lat_lon_acumulados(df: pd.DataFrame) -> dict:
 
-    # dicionário para armazenar as coordenadas geográficas dos municípios
     coordenadas_municipios_chuva = {}
 
-    # Verificar quais municípios do dicionário de coordenadas estão no DataFrame
-    for municipio, coordenadas in COORDENADAS_ESPIRITO_SANTO.items():
-        if municipio in df['Município'].values:
-            mm_value = df.loc[df['Município'] == municipio, 'Prec_mm'].values[0]
-            coordenadas_municipios_chuva[municipio] = coordenadas, mm_value
+    if df is None or df.empty:
+        return coordenadas_municipios_chuva
+
+    for _, row in df.iterrows():
+        municipio = row["Município"]
+        coordenadas = None
+
+        latitude = row.get("Latitude")
+        longitude = row.get("Longitude")
+
+        if pd.notna(latitude) and pd.notna(longitude):
+            coordenadas = (float(latitude), float(longitude))
+        else:
+            coordenadas = COORDENADAS_ESPIRITO_SANTO.get(municipio)
+
+        if coordenadas:
+            coordenadas_municipios_chuva[municipio] = coordenadas, row["Prec_mm"]
 
     return coordenadas_municipios_chuva
 

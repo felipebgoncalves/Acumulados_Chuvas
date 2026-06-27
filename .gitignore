@@ -1,5 +1,8 @@
+RELATORIO_MELHORIAS.md
+
 .streamlit/secrets.toml
 .env
+data/snapshots/
 
 /testes
 /testes/__pycache__/
