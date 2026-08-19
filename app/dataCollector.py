@@ -6,9 +6,21 @@ from zoneinfo import ZoneInfo
 
 import pandas as pd
 import requests
-import streamlit as st
 import urllib3
 from dateutil.parser import parse
+
+try:
+    import streamlit as st
+except ModuleNotFoundError:
+    class _StreamlitFallback:
+        @staticmethod
+        def cache_resource(*args, **kwargs):
+            def decorator(func):
+                return func
+
+            return decorator
+
+    st = _StreamlitFallback()
 
 from app.codEstacoes import ANA, CEPDEC, INCAPER, INMET
 from app.config.settings import (
@@ -19,11 +31,13 @@ from app.config.settings import (
     CEMADEN_URL,
     EXTENDED_COLUMNS,
     INMET_BASE_URL,
+    PMVV_BASE_URL,
     REQUEST_TIMEOUT_SECONDS,
     SATDES_MAP_URL,
     SOURCE_ANA,
     SOURCE_CEMADEN,
     SOURCE_INMET,
+    SOURCE_PMVV,
 )
 from app.services.estacoes import carregar_base_estacoes
 from app.services.normalizacao import (
@@ -412,6 +426,257 @@ class InmetCollector(DataCollector):
                         )
                 except Exception as exc:
                     print(f"Erro na estação INMET {cod}: {exc}")
+
+        if not registros:
+            return self.empty_dataframe()
+
+        df = pd.DataFrame(registros).sort_values(by="Prec_mm", ascending=False)
+        return self.finalize(df)
+
+
+class PmvvCollector(DataCollector):
+    fonte = SOURCE_PMVV
+    BASE_URL = PMVV_BASE_URL
+
+    def __init__(
+        self,
+        api_key: str,
+        username: str,
+        password: str,
+        base_url: str | None = None,
+        max_workers: int = 8,
+    ):
+        self.api_key = api_key
+        self.username = username
+        self.password = password
+        self.base_url = (base_url or self.BASE_URL).rstrip("/")
+        self.max_workers = max_workers
+
+    def _api_headers(self, token: str | None = None) -> dict:
+        headers = {"x-api-key": self.api_key}
+        if token:
+            headers["authorization"] = token
+        return headers
+
+    def _login(self) -> str:
+        payload = {"username": self.username, "password": self.password}
+        response = requests.post(
+            f"{self.base_url}/login",
+            headers=self._api_headers(),
+            json=payload,
+            timeout=REQUEST_TIMEOUT_SECONDS,
+        )
+        response.raise_for_status()
+
+        token = response.json().get("access_token")
+        if not token:
+            raise RuntimeError("Token PMVV não retornado pela API.")
+
+        return token
+
+    def _listar_dispositivos(self, token: str) -> list[dict]:
+        dispositivos = []
+        pagina = 1
+
+        while True:
+            response = requests.get(
+                f"{self.base_url}/device",
+                params={"page": pagina},
+                headers=self._api_headers(token),
+                timeout=REQUEST_TIMEOUT_SECONDS,
+            )
+            response.raise_for_status()
+            payload = response.json()
+
+            lista = payload.get("deviceList") or payload.get("data", {}).get("deviceList") or []
+            dispositivos.extend(lista)
+
+            paginacao = payload.get("pagination") or {}
+            total_paginas = (
+                paginacao.get("totalPages")
+                or paginacao.get("total_pages")
+                or paginacao.get("pages")
+            )
+
+            if total_paginas and pagina < int(total_paginas):
+                pagina += 1
+                continue
+
+            if not total_paginas and lista:
+                pagina_atual = paginacao.get("page") or paginacao.get("currentPage")
+                proxima = paginacao.get("nextPage") or paginacao.get("next")
+                if proxima and pagina_atual != proxima:
+                    pagina = int(proxima)
+                    continue
+
+            break
+
+        return dispositivos
+
+    @staticmethod
+    def _periodo_24h() -> tuple[datetime, datetime, int, int]:
+        fim = datetime.now(TZ_BRT)
+        inicio = fim - timedelta(hours=24)
+        return (
+            inicio,
+            fim,
+            int(inicio.timestamp() * 1000),
+            int(fim.timestamp() * 1000),
+        )
+
+    @staticmethod
+    def _sensores_chuva(dispositivo: dict) -> list[dict]:
+        sensores = []
+
+        for sensor in dispositivo.get("sensorList") or []:
+            nome = str(sensor.get("name") or "").lower()
+            unidade = str(sensor.get("unit") or "").lower()
+
+            if "chuva" in nome and unidade == "mm":
+                sensores.append(sensor)
+
+        return sensores
+
+    def _consultar_sensor(
+        self,
+        device_id: int,
+        sensor_id: int,
+        token: str,
+        inicio_ms: int,
+        fim_ms: int,
+    ):
+        leituras = []
+        pagina = 1
+
+        while True:
+            response = requests.get(
+                f"{self.base_url}/data/sensor",
+                params={
+                    "device": device_id,
+                    "sensor": sensor_id,
+                    "time": inicio_ms,
+                    "timeMax": fim_ms,
+                    "page": pagina,
+                },
+                headers=self._api_headers(token),
+                timeout=REQUEST_TIMEOUT_SECONDS,
+            )
+            response.raise_for_status()
+            payload = response.json()
+
+            dados = payload.get("data", payload if isinstance(payload, list) else [])
+            leituras.extend(dados or [])
+
+            paginacao = payload.get("pagination") if isinstance(payload, dict) else {}
+            total_paginas = (paginacao or {}).get("totalPages")
+
+            if total_paginas and pagina < int(total_paginas):
+                pagina += 1
+                continue
+
+            break
+
+        return device_id, sensor_id, leituras
+
+    @staticmethod
+    def _valor_leitura_sensor(item: dict) -> float:
+        return to_float(item.get("valueFormatted"))
+
+    @staticmethod
+    def _data_referencia(item: dict) -> str | None:
+        timestamp = item.get("time") or item.get("timestamp")
+        if timestamp:
+            try:
+                return datetime.fromtimestamp(
+                    int(timestamp) / 1000,
+                    tz=timezone.utc,
+                ).astimezone(TZ_BRT).isoformat()
+            except Exception:
+                return None
+
+        return None
+
+    @staticmethod
+    def _coordenada_dispositivo(dispositivo: dict, chave: str):
+        return dispositivo.get(chave) or dispositivo.get("dashboard", {}).get(chave)
+
+    def fetch(self):
+        if not self.api_key or not self.username or not self.password:
+            raise RuntimeError("Credenciais PMVV não configuradas.")
+
+        token = self._login()
+        dispositivos = self._listar_dispositivos(token)
+        _, _, inicio_ms, fim_ms = self._periodo_24h()
+        registros = []
+        dispositivos_por_id = {item.get("id"): item for item in dispositivos if item.get("id")}
+
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            futures = {
+                executor.submit(
+                    self._consultar_sensor,
+                    device_id,
+                    sensor.get("id"),
+                    token,
+                    inicio_ms,
+                    fim_ms,
+                ): (device_id, sensor)
+                for device_id, dispositivo in dispositivos_por_id.items()
+                for sensor in self._sensores_chuva(dispositivo)
+                if sensor.get("id")
+            }
+
+            acumulados_por_dispositivo = {}
+
+            for future in as_completed(futures):
+                device_id, sensor = futures[future]
+                dispositivo = dispositivos_por_id[device_id]
+
+                try:
+                    _, sensor_id, leituras = future.result()
+                    soma = 0.0
+                    ultima_referencia = None
+
+                    for item in leituras or []:
+                        soma += self._valor_leitura_sensor(item)
+                        ultima_referencia = self._data_referencia(item) or ultima_referencia
+
+                    sensor_atual = acumulados_por_dispositivo.get(device_id)
+                    if sensor_atual is None or soma > sensor_atual["soma"]:
+                        acumulados_por_dispositivo[device_id] = {
+                            "soma": soma,
+                            "sensor_id": sensor_id,
+                            "sensor_nome": sensor.get("name"),
+                            "ultima_referencia": ultima_referencia,
+                            "dispositivo": dispositivo,
+                        }
+                except Exception as exc:
+                    print(
+                        f"Erro na estação PMVV {device_id}, "
+                        f"sensor {sensor.get('id')}: {exc}"
+                    )
+
+        for acumulado in acumulados_por_dispositivo.values():
+            soma = acumulado["soma"]
+            if soma <= 0:
+                continue
+
+            dispositivo = acumulado["dispositivo"]
+            registros.append(
+                {
+                    "Município": "VILA VELHA",
+                    "Prec_mm": round(soma, 2),
+                    "Instituição": SOURCE_PMVV,
+                    "Estação": (
+                        f"{dispositivo.get('name') or dispositivo.get('id')} "
+                        f"({acumulado['sensor_nome']})"
+                    ),
+                    "Latitude": self._coordenada_dispositivo(dispositivo, "latitude"),
+                    "Longitude": self._coordenada_dispositivo(dispositivo, "longitude"),
+                    "Altitude": dispositivo.get("altitude"),
+                    "DataHoraReferencia": acumulado["ultima_referencia"],
+                    "Fonte": SOURCE_PMVV,
+                }
+            )
 
         if not registros:
             return self.empty_dataframe()

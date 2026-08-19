@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from app.dataCollector import InmetCollector, SatdesCollector
+from app.dataCollector import InmetCollector, PmvvCollector, SatdesCollector
 
 
 def test_inmet_extrai_chuva_de_payload_horario():
@@ -44,3 +44,21 @@ def test_satdes_filtra_inmet_e_ana_do_payload():
 
     assert len(resultado) == 1
     assert resultado.loc[0, "Instituição"] == "CEPDEC"
+
+
+def test_pmvv_identifica_sensores_de_chuva_em_mm():
+    dispositivo = {
+        "sensorList": [
+            {"id": 8, "name": "Temperatura", "unit": "ºC"},
+            {"id": 35, "name": "Chuva", "unit": "mm"},
+            {"id": 191, "name": "Chuva adicional", "unit": "mm"},
+        ]
+    }
+
+    sensores = PmvvCollector._sensores_chuva(dispositivo)
+
+    assert [sensor["id"] for sensor in sensores] == [35, 191]
+
+
+def test_pmvv_valor_leitura_sensor_usa_value_formatted():
+    assert PmvvCollector._valor_leitura_sensor({"valueFormatted": "2,4"}) == 2.4

@@ -18,10 +18,18 @@ from app.config.settings import (
     SOURCE_ANA,
     SOURCE_CEMADEN,
     SOURCE_INMET,
+    SOURCE_PMVV,
     SOURCE_SATDES,
     get_env,
 )
-from app.dataCollector import AnaCollector, CemadenCollector, InmetCollector, Joiner, SatdesCollector
+from app.dataCollector import (
+    AnaCollector,
+    CemadenCollector,
+    InmetCollector,
+    Joiner,
+    PmvvCollector,
+    SatdesCollector,
+)
 from app.municipiosES import municipios_lat_lon_acumulados
 from app.render_header_footer import render_footer, render_header
 from app.services.fonte_status import FonteStatus
@@ -68,6 +76,18 @@ def load_inmet(token: str):
     collector = InmetCollector(
         token=token,
         estacoes_dict=INMET,
+        max_workers=8,
+    )
+    return collector.fetch()
+
+
+@st.cache_data(ttl=CACHE_TTL_SECONDS, show_spinner="Buscando dados da PMVV...")
+def load_pmvv(api_key: str, username: str, password: str, base_url: str | None):
+    collector = PmvvCollector(
+        api_key=api_key,
+        username=username,
+        password=password,
+        base_url=base_url,
         max_workers=8,
     )
     return collector.fetch()
@@ -122,6 +142,27 @@ def carregar_acumulados():
         )
     dfs.append(df_inmet)
     status.append(status_inmet)
+
+    pmvv_api_key = get_secret("PMVV_API_Key")
+    pmvv_username = get_secret("PMVV_Username")
+    pmvv_password = get_secret("PMVV_PASSWORD")
+    pmvv_base_url = get_secret("URL_PMVV", "https://prod-api.plugfield.com.br")
+    if pmvv_api_key and pmvv_username and pmvv_password:
+        df_pmvv, status_pmvv = coletar_fonte(
+            SOURCE_PMVV,
+            load_pmvv,
+            pmvv_api_key,
+            pmvv_username,
+            pmvv_password,
+            pmvv_base_url,
+        )
+    else:
+        df_pmvv, status_pmvv = dataframe_vazio(), FonteStatus.falha_coleta(
+            SOURCE_PMVV,
+            "Credenciais PMVV não configuradas.",
+        )
+    dfs.append(df_pmvv)
+    status.append(status_pmvv)
 
     try:
         df_final = Joiner.join(*dfs)

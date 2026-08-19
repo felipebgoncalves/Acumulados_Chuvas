@@ -18,6 +18,11 @@ SATDES_STATIONS_FILE = DATA_DIR / "stations_satdes.json"
 load_dotenv(BASE_DIR / ".env")
 
 
+def get_env(name: str, default: str | None = None) -> str | None:
+    """Lê variável do ambiente/.env sem expor o valor em logs."""
+    return os.getenv(name, default)
+
+
 APP_TITLE = "Acumulados de Chuva nas Últimas 24h — Espírito Santo"
 APP_SUBTITLE = (
     "Script para verificação dos maiores acumulados de chuva de cada município "
@@ -34,13 +39,16 @@ SATDES_STATIONS_URL = "https://satdes-backend.incaper.es.gov.br/api/v1/stations"
 ANA_BASE_URL = "https://www.ana.gov.br/hidrowebservice/EstacoesTelemetricas"
 ANA_TOKEN_URL = f"{ANA_BASE_URL}/OAUth/v1"
 INMET_BASE_URL = "https://apitempo.inmet.gov.br"
+PMVV_BASE_URL = get_env("URL_PMVV", "https://prod-api.plugfield.com.br")
 
 SOURCE_CEMADEN = "CEMADEN"
 SOURCE_ANA = "ANA"
 SOURCE_SATDES = "SATDES"
 SOURCE_INMET = "INMET"
+SOURCE_PMVV = "PMVV"
 
 BASE_COLUMNS = ["Município", "Prec_mm", "Instituição"]
+
 EXTENDED_COLUMNS = [
     "Município",
     "Prec_mm",
@@ -54,8 +62,3 @@ EXTENDED_COLUMNS = [
 ]
 
 ALLOWED_SATDES_INSTITUTIONS = {"CEPDEC", "INCAPER"}
-
-
-def get_env(name: str, default: str | None = None) -> str | None:
-    """Lê variável do ambiente/.env sem expor o valor em logs."""
-    return os.getenv(name, default)

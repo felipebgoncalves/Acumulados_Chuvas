@@ -9,6 +9,7 @@ O projeto integra diferentes fontes de dados, normaliza os registros para um con
 - CEMADEN;
 - ANA;
 - INMET;
+- PMVV / Plugfield;
 - SATDES, usando apenas estações CEPDEC e INCAPER.
 
 ## Resultado exibido
@@ -67,15 +68,13 @@ Configure as variáveis no `.env` para execução local ou em `st.secrets` no St
 ANA_ID
 ANA_PWD
 INMET_API_TOKEN
+PMVV_API_Key
+PMVV_Username
+PMVV_PASSWORD
+URL_PMVV
 ```
 
-As variáveis da API Plugfield/Vila Velha podem permanecer configuradas para uso futuro:
-
-```text
-VV_API_Key
-VV_Username
-VV_PASSWORD
-```
+As credenciais da PMVV/Plugfield são usadas para consultar estações e dados horários de chuva do município de Vila Velha.
 
 ## Como rodar localmente
 
@@ -137,4 +136,4 @@ O GitHub Actions é usado como apoio operacional para validação contínua, exe
 - Algumas fontes externas podem ficar lentas ou indisponíveis.
 - O CEMADEN permanece usando `verify=False` por necessidade da fonte atual.
 - Snapshots gerados no Streamlit Cloud podem ser efêmeros dependendo do ambiente de execução.
-- A API Plugfield/Vila Velha ainda não foi integrada ao fluxo principal.
+- O acumulado PMVV/Plugfield é calculado por `/data/sensor`, somando as leituras dos sensores de chuva em milímetros nas últimas 24 horas. Os endpoints agrupados `/data/hourly` e `/data/daily` não são usados pelo collector.
