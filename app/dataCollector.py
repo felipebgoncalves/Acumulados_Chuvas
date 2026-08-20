@@ -687,7 +687,7 @@ class PmvvCollector(DataCollector):
 
 class Joiner:
     @staticmethod
-    def join(*dfs):
+    def all_records(*dfs):
         validos = [
             garantir_colunas_estendidas(df)
             for df in dfs
@@ -703,8 +703,12 @@ class Joiner:
         if df.empty:
             return DataCollector.empty_dataframe()
 
+        return df.sort_values("Prec_mm", ascending=False).reset_index(drop=True)
+
+    @staticmethod
+    def join(*dfs):
         return (
-            df.sort_values("Prec_mm", ascending=False)
+            Joiner.all_records(*dfs)
             .drop_duplicates("Município")
             .reset_index(drop=True)
         )

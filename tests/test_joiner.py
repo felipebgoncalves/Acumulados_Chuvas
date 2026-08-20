@@ -39,3 +39,18 @@ def test_joiner_ignora_valores_zerados_e_negativos():
     resultado = Joiner.join(df)
 
     assert resultado.empty
+
+
+def test_joiner_all_records_mantem_registros_repetidos():
+    df = pd.DataFrame(
+        [
+            {"Município": "VILA VELHA", "Prec_mm": 2.0, "Instituição": "PMVV", "Estação": "A"},
+            {"Município": "VILA VELHA", "Prec_mm": 1.5, "Instituição": "PMVV", "Estação": "B"},
+            {"Município": "VILA VELHA", "Prec_mm": 0.5, "Instituição": "CEMADEN"},
+        ]
+    )
+
+    resultado = Joiner.all_records(df)
+
+    assert len(resultado) == 3
+    assert resultado["Prec_mm"].tolist() == [2.0, 1.5, 0.5]

@@ -165,12 +165,13 @@ def carregar_acumulados():
     status.append(status_pmvv)
 
     try:
+        df_geral = Joiner.all_records(*dfs)
         df_final = Joiner.join(*dfs)
         salvar_snapshot_json(df_final)
-        return df_final, status
+        return df_final, df_geral, status
     except Exception as exc:
         status.append(FonteStatus.falha_coleta("CONSOLIDAÇÃO", exc))
-        return dataframe_vazio(), status
+        return dataframe_vazio(), dataframe_vazio(), status
 
 
 def cor_por_acumulado(valor: float) -> str:
@@ -312,6 +313,26 @@ def render_lista(df: pd.DataFrame) -> None:
         st.text(item)
 
 
+def render_lista_geral(df: pd.DataFrame, limite: int = 60) -> None:
+    if df.empty:
+        st.info("Sem acumulados de chuvas no momento!")
+        return
+
+    st.markdown(f"**Ranking geral de acumulados de chuva em 24h — até {limite} registros:**")
+
+    tabela = df.sort_values("Prec_mm", ascending=False).head(limite).reset_index(drop=True)
+
+    for index, row in tabela.iterrows():
+        fonte = row.get("Instituição") or row.get("Fonte") or "-"
+        item = "{}. {} - {:.2f} mm - {}".format(
+            index + 1,
+            row["Município"],
+            row["Prec_mm"],
+            fonte,
+        )
+        st.text(item)
+
+
 def render_status_fontes(status: list[FonteStatus]) -> None:
     st.subheader("Status das fontes")
     if not status:
@@ -331,10 +352,17 @@ def run():
 
     render_header()
 
-    df, status = carregar_acumulados()
+    df, df_geral, status = carregar_acumulados()
     render_cards_resumo(df, status)
 
-    tab1, tab2, tab3 = st.tabs(["PRINCIPAL 📌", "LISTA DE ACUMULADOS 📋", "FONTES 🛰️"])
+    tab1, tab2, tab3, tab4 = st.tabs(
+        [
+            "PRINCIPAL 📌",
+            "LISTA DE ACUMULADOS 📋",
+            "LISTA DE ACUMULADOS - GERAL 🌧️",
+            "FONTES 🛰️",
+        ]
+    )
 
     with tab1:
         col1, col2 = st.columns([2, 1])
@@ -347,6 +375,9 @@ def run():
         render_lista(df)
 
     with tab3:
+        render_lista_geral(df_geral)
+
+    with tab4:
         render_status_fontes(status)
 
     render_footer()
