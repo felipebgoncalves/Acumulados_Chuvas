@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
+from time import perf_counter
 from zoneinfo import ZoneInfo
 
 import folium
@@ -98,71 +100,94 @@ def dataframe_vazio() -> pd.DataFrame:
 
 
 def coletar_fonte(nome: str, funcao, *args):
+    inicio = perf_counter()
+
     try:
         df = funcao(*args)
-        if df is None or df.empty:
-            return dataframe_vazio(), FonteStatus.sucesso_coleta(nome, 0)
+        duracao = perf_counter() - inicio
 
-        return df, FonteStatus.sucesso_coleta(nome, len(df))
+        if df is None or df.empty:
+            return dataframe_vazio(), FonteStatus.sucesso_coleta(nome, 0, duracao)
+
+        return df, FonteStatus.sucesso_coleta(nome, len(df), duracao)
     except Exception as exc:
-        return dataframe_vazio(), FonteStatus.falha_coleta(nome, exc)
+        duracao = perf_counter() - inicio
+        return dataframe_vazio(), FonteStatus.falha_coleta(nome, exc, duracao)
 
 
 def carregar_acumulados():
-    dfs = []
-    status = []
-
-    df_cemaden, status_cemaden = coletar_fonte(SOURCE_CEMADEN, load_cemaden)
-    dfs.append(df_cemaden)
-    status.append(status_cemaden)
-
-    df_satdes, status_satdes = coletar_fonte(SOURCE_SATDES, load_satdes)
-    dfs.append(df_satdes)
-    status.append(status_satdes)
+    tarefas = [
+        (SOURCE_CEMADEN, load_cemaden, ()),
+        (SOURCE_SATDES, load_satdes, ()),
+    ]
+    falhas_configuracao = []
 
     ana_id = get_secret("ANA_ID")
     ana_pwd = get_secret("ANA_PWD")
     if ana_id and ana_pwd:
-        df_ana, status_ana = coletar_fonte(SOURCE_ANA, load_ana, ana_id, ana_pwd)
+        tarefas.append((SOURCE_ANA, load_ana, (ana_id, ana_pwd)))
     else:
-        df_ana, status_ana = dataframe_vazio(), FonteStatus.falha_coleta(
-            SOURCE_ANA,
-            "Credenciais ANA não configuradas.",
+        falhas_configuracao.append(
+            (
+                dataframe_vazio(),
+                FonteStatus.falha_coleta(SOURCE_ANA, "Credenciais ANA não configuradas.", 0),
+            )
         )
-    dfs.append(df_ana)
-    status.append(status_ana)
 
     inmet_token = get_secret("INMET_API_TOKEN")
     if inmet_token:
-        df_inmet, status_inmet = coletar_fonte(SOURCE_INMET, load_inmet, inmet_token)
+        tarefas.append((SOURCE_INMET, load_inmet, (inmet_token,)))
     else:
-        df_inmet, status_inmet = dataframe_vazio(), FonteStatus.falha_coleta(
-            SOURCE_INMET,
-            "Token INMET não configurado.",
+        falhas_configuracao.append(
+            (
+                dataframe_vazio(),
+                FonteStatus.falha_coleta(SOURCE_INMET, "Token INMET não configurado.", 0),
+            )
         )
-    dfs.append(df_inmet)
-    status.append(status_inmet)
 
     pmvv_api_key = get_secret("PMVV_API_Key")
     pmvv_username = get_secret("PMVV_Username")
     pmvv_password = get_secret("PMVV_PASSWORD")
     pmvv_base_url = get_secret("URL_PMVV", "https://prod-api.plugfield.com.br")
     if pmvv_api_key and pmvv_username and pmvv_password:
-        df_pmvv, status_pmvv = coletar_fonte(
-            SOURCE_PMVV,
-            load_pmvv,
-            pmvv_api_key,
-            pmvv_username,
-            pmvv_password,
-            pmvv_base_url,
+        tarefas.append(
+            (
+                SOURCE_PMVV,
+                load_pmvv,
+                (pmvv_api_key, pmvv_username, pmvv_password, pmvv_base_url),
+            )
         )
     else:
-        df_pmvv, status_pmvv = dataframe_vazio(), FonteStatus.falha_coleta(
-            SOURCE_PMVV,
-            "Credenciais PMVV não configuradas.",
+        falhas_configuracao.append(
+            (
+                dataframe_vazio(),
+                FonteStatus.falha_coleta(SOURCE_PMVV, "Credenciais PMVV não configuradas.", 0),
+            )
         )
-    dfs.append(df_pmvv)
-    status.append(status_pmvv)
+
+    resultados = {}
+
+    with ThreadPoolExecutor(max_workers=min(len(tarefas), 5) or 1) as executor:
+        futures = {
+            executor.submit(coletar_fonte, nome, funcao, *args): nome
+            for nome, funcao, args in tarefas
+        }
+
+        for future in as_completed(futures):
+            nome = futures[future]
+            resultados[nome] = future.result()
+
+    dfs = []
+    status = []
+
+    for nome, _, _ in tarefas:
+        df_fonte, status_fonte = resultados[nome]
+        dfs.append(df_fonte)
+        status.append(status_fonte)
+
+    for df_fonte, status_fonte in falhas_configuracao:
+        dfs.append(df_fonte)
+        status.append(status_fonte)
 
     try:
         df_geral = Joiner.all_records(*dfs)

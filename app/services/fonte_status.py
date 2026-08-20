@@ -16,9 +16,15 @@ class FonteStatus:
     mensagem: str = ""
     atualizado_em: datetime | None = None
     ultima_tentativa: datetime | None = None
+    duracao_segundos: float | None = None
 
     @classmethod
-    def sucesso_coleta(cls, fonte: str, registros: int) -> "FonteStatus":
+    def sucesso_coleta(
+        cls,
+        fonte: str,
+        registros: int,
+        duracao_segundos: float | None = None,
+    ) -> "FonteStatus":
         agora = datetime.now(TZ_BRT)
         return cls(
             fonte=fonte,
@@ -27,10 +33,16 @@ class FonteStatus:
             mensagem="Coleta realizada com sucesso.",
             atualizado_em=agora,
             ultima_tentativa=agora,
+            duracao_segundos=duracao_segundos,
         )
 
     @classmethod
-    def falha_coleta(cls, fonte: str, erro: Exception | str) -> "FonteStatus":
+    def falha_coleta(
+        cls,
+        fonte: str,
+        erro: Exception | str,
+        duracao_segundos: float | None = None,
+    ) -> "FonteStatus":
         agora = datetime.now(TZ_BRT)
         return cls(
             fonte=fonte,
@@ -39,6 +51,7 @@ class FonteStatus:
             mensagem=str(erro),
             atualizado_em=None,
             ultima_tentativa=agora,
+            duracao_segundos=duracao_segundos,
         )
 
     def to_dict(self) -> dict:
@@ -51,6 +64,9 @@ class FonteStatus:
             else "-",
             "Última tentativa": self.ultima_tentativa.strftime("%d/%m/%Y %H:%M:%S")
             if self.ultima_tentativa
+            else "-",
+            "Duração (s)": round(self.duracao_segundos, 2)
+            if self.duracao_segundos is not None
             else "-",
             "Mensagem": self.mensagem,
         }

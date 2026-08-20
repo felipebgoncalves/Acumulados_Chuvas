@@ -326,7 +326,7 @@ class AnaCollector(DataCollector):
                             }
                         )
                 except Exception as exc:
-                    print(f"Erro na estação {cod}: {exc}")
+                    print(f"Erro na estação ANA {cod}: {erro_http_resumido(exc)}")
 
         if not registros:
             return self.empty_dataframe()
@@ -661,7 +661,7 @@ class PmvvCollector(DataCollector):
                 except Exception as exc:
                     print(
                         f"Erro na estação PMVV {device_id}, "
-                        f"sensor {sensor.get('id')}: {exc}"
+                        f"sensor {sensor.get('id')}: {erro_http_resumido(exc)}"
                     )
 
         for acumulado in acumulados_por_dispositivo.values():
