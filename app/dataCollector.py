@@ -51,6 +51,15 @@ urllib3.disable_warnings()
 TZ_BRT = ZoneInfo("America/Sao_Paulo")
 
 
+def erro_http_resumido(exc: Exception) -> str:
+    """Formata erros HTTP sem expor URL, tokens ou parâmetros sensíveis."""
+    response = getattr(exc, "response", None)
+    if response is not None:
+        return f"HTTP {response.status_code}"
+
+    return exc.__class__.__name__
+
+
 MAPA_ESTACOES_SATDES = {
     **{k: ("CEPDEC", v) for k, v in CEPDEC.items()},
     **{k: ("INCAPER", v) for k, v in INCAPER.items()},
@@ -425,7 +434,7 @@ class InmetCollector(DataCollector):
                             }
                         )
                 except Exception as exc:
-                    print(f"Erro na estação INMET {cod}: {exc}")
+                    print(f"Erro na estação INMET {cod}: {erro_http_resumido(exc)}")
 
         if not registros:
             return self.empty_dataframe()
