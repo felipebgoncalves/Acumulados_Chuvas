@@ -235,7 +235,7 @@ def obter_token_ana(identificador: str, senha: str) -> str:
         "Senha": senha,
     }
 
-    response = requests.get(ANA_TOKEN_URL, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
+    response = requests.get(ANA_TOKEN_URL, headers=headers, timeout=90)
     response.raise_for_status()
 
     token = response.json().get("items", {}).get("tokenautenticacao")
