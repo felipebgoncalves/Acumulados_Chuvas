@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
+from html import escape
 from time import perf_counter
 from zoneinfo import ZoneInfo
 
@@ -21,7 +22,7 @@ from app.config.settings import (
     SOURCE_CEMADEN,
     SOURCE_INMET,
     SOURCE_PMVV,
-    SOURCE_SATDES,
+    SOURCE_CEPDEC,
     get_env,
 )
 from app.dataCollector import (
@@ -30,7 +31,7 @@ from app.dataCollector import (
     InmetCollector,
     Joiner,
     PmvvCollector,
-    SatdesCollector,
+    CepdecCollector,
 )
 from app.municipiosES import municipios_lat_lon_acumulados
 from app.render_header_footer import render_footer, render_header
@@ -57,9 +58,13 @@ def load_cemaden():
     return CemadenCollector().get_dataframe()
 
 
-@st.cache_data(ttl=CACHE_TTL_SECONDS, show_spinner="Buscando dados do CEPDEC e INCAPER...")
-def load_satdes():
-    return SatdesCollector().get_dataframe()
+@st.cache_data(ttl=CACHE_TTL_SECONDS, show_spinner="Buscando dados da CEPDEC...")
+def load_cepdec(base_url: str, token_url: str, client_id: str, client_secret: str,
+                api_key: str, grant_type: str):
+    return CepdecCollector(
+        base_url=base_url, token_url=token_url, client_id=client_id,
+        client_secret=client_secret, api_key=api_key, grant_type=grant_type,
+    ).fetch()
 
 
 @st.cache_data(ttl=CACHE_TTL_SECONDS, show_spinner="Buscando dados da ANA...")
@@ -106,10 +111,14 @@ def coletar_fonte(nome: str, funcao, *args):
         df = funcao(*args)
         duracao = perf_counter() - inicio
 
-        if df is None or df.empty:
-            return dataframe_vazio(), FonteStatus.sucesso_coleta(nome, 0, duracao)
-
-        return df, FonteStatus.sucesso_coleta(nome, len(df), duracao)
+        if df is None:
+            df = dataframe_vazio()
+        status = FonteStatus.sucesso_coleta(nome, len(df), duracao)
+        avisos = df.attrs.get("avisos", [])
+        if avisos:
+            status.parcial = True
+            status.mensagem = " | ".join(avisos)
+        return df, status
     except Exception as exc:
         duracao = perf_counter() - inicio
         return dataframe_vazio(), FonteStatus.falha_coleta(nome, exc, duracao)
@@ -118,9 +127,21 @@ def coletar_fonte(nome: str, funcao, *args):
 def carregar_acumulados():
     tarefas = [
         (SOURCE_CEMADEN, load_cemaden, ()),
-        (SOURCE_SATDES, load_satdes, ()),
     ]
     falhas_configuracao = []
+
+    cepdec_config = tuple(get_secret(name) for name in (
+        "SIMET_URL", "KEYCLOAK_URL_TOKEN", "client_id", "client_secret", "x_api_key",
+    ))
+    if all(cepdec_config):
+        tarefas.append((SOURCE_CEPDEC, load_cepdec, (
+            *cepdec_config, get_secret("grant_type", "client_credentials"),
+        )))
+    else:
+        falhas_configuracao.append((
+            dataframe_vazio(),
+            FonteStatus.falha_coleta(SOURCE_CEPDEC, "Credenciais/URLs CEPDEC não configuradas.", 0),
+        ))
 
     ana_id = get_secret("ANA_ID")
     ana_pwd = get_secret("ANA_PWD")
@@ -265,6 +286,7 @@ def render_mapa(df: pd.DataFrame) -> None:
         estacao = linha.get("Estação") or "-"
         fonte = linha.get("Instituição") or linha.get("Fonte") or "-"
         referencia = linha.get("DataHoraReferencia") or "-"
+        observacao = escape(linha.get("Observação") or "")
 
         html = f"""
             <div style="font-size: 13px;">
@@ -273,6 +295,7 @@ def render_mapa(df: pd.DataFrame) -> None:
                 Fonte: {fonte}<br>
                 Estação: {estacao}<br>
                 Referência: {referencia}
+                {f'<br><strong>Atenção:</strong> {observacao}' if observacao else ''}
             </div>
         """
 
@@ -309,6 +332,8 @@ def render_ranking(df: pd.DataFrame) -> None:
     tabela.insert(0, "Posição", range(1, len(tabela) + 1))
 
     colunas = ["Posição", "Município", "Prec_mm", "Instituição"]
+    if "Observação" in tabela and tabela["Observação"].fillna("").ne("").any():
+        colunas.append("Observação")
     altura_df = min((len(tabela) + 1) * 35 + 3, 700)
 
     st.dataframe(
@@ -335,6 +360,8 @@ def render_lista(df: pd.DataFrame) -> None:
             row["Município"],
             row["Prec_mm"],
         )
+        if row.get("Observação"):
+            item += f" — {row['Observação']}"
         st.text(item)
 
 
@@ -355,6 +382,8 @@ def render_lista_geral(df: pd.DataFrame, limite: int = 60) -> None:
             row["Prec_mm"],
             fonte,
         )
+        if row.get("Observação"):
+            item += f" — {row['Observação']}"
         st.text(item)
 
 
@@ -379,6 +408,12 @@ def run():
 
     df, df_geral, status = carregar_acumulados()
     render_cards_resumo(df, status)
+    for fonte_status in status:
+        if fonte_status.parcial:
+            st.warning(
+                f"{fonte_status.fonte}: dados incompletos em uma ou mais estações. "
+                "Os acumulados disponíveis foram mantidos; consulte os detalhes na aba FONTES."
+            )
 
     tab1, tab2, tab3, tab4 = st.tabs(
         [

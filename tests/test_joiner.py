@@ -13,7 +13,7 @@ def test_joiner_mantem_maior_acumulado_por_municipio():
     df_2 = pd.DataFrame(
         [
             {"Município": "VITÓRIA", "Prec_mm": 18.0, "Instituição": "INMET"},
-            {"Município": "SERRA", "Prec_mm": 3.0, "Instituição": "SATDES"},
+            {"Município": "SERRA", "Prec_mm": 3.0, "Instituição": "CEPDEC"},
         ]
     )
 

@@ -10,7 +10,7 @@ O projeto integra diferentes fontes de dados, normaliza os registros para um con
 - ANA;
 - INMET;
 - PMVV / Plugfield;
-- SATDES, usando apenas estações CEPDEC e INCAPER.
+- CEPDEC / SIMET, consultando diretamente 29 estações.
 
 ## Resultado exibido
 
@@ -58,6 +58,7 @@ Longitude
 Altitude
 DataHoraReferencia
 Fonte
+Observação
 ```
 
 ## Variáveis e secrets necessários
@@ -72,9 +73,20 @@ PMVV_API_Key
 PMVV_Username
 PMVV_PASSWORD
 URL_PMVV
+SIMET_URL
+KEYCLOAK_URL_TOKEN
+grant_type
+client_id
+client_secret
+api_key
 ```
 
 As credenciais da PMVV/Plugfield são usadas para consultar estações e dados horários de chuva do município de Vila Velha.
+
+Para a CEPDEC, `SIMET_URL` é a URL base e `KEYCLOAK_URL_TOKEN` é a URL completa de autenticação.
+As chaves são sensíveis a maiúsculas/minúsculas. Use `grant_type=client_credentials`.
+O campo `scope` não é enviado: o valor testado foi rejeitado pelo servidor com `invalid_scope`.
+Cadastre essas mesmas chaves em **Settings → Secrets** no Streamlit Cloud; o `.env` local não é enviado ao GitHub.
 
 ## Como rodar localmente
 
@@ -117,13 +129,22 @@ Essa pasta é ignorada pelo Git para evitar commits automáticos de arquivos ger
 
 ## Base de estações
 
-A base de metadados de estações do SATDES fica em:
+O catálogo CEPDEC fica no dicionário `CEPDEC` em `app/codEstacoes.py`, com as 29 estações configuradas.
+As duas estações de Vargem Alta permanecem separadas na lista geral; a consolidação por município mantém o maior acumulado.
+Coordenadas e altitude são obtidas por `/v1/estacoes`.
+Os metadados locais já usados pela ANA e pelo INMET foram preservados em `data/stations_ana_inmet.json`, sem dependência de outra API.
 
-```text
-data/stations_satdes.json
-```
+### Coleta CEPDEC
 
-Ela é usada para complementar os dados com município, instituição, latitude, longitude e altitude quando essas informações estão disponíveis.
+- Um token por coleta; até quatro consultas de estações simultâneas, em paralelo com as outras fontes.
+- Consulta `/v1/observacoes?estacao=...&intervalo_minutos=15`, com paginação por `cursor`/`next_cursor`, da mais recente para a mais antiga.
+- Soma `dados.PRECIPITACAO_MM` em `(agora UTC - 24 horas, agora UTC]`; não mistura registros horários e de 15 minutos.
+- Remove horários duplicados e descarta valores ausentes, negativos, não finitos, qualidade diferente de `VALIDO` ou registros com flags.
+- Espera 96 leituras por estação e sinaliza lacunas maiores que 16 minutos (tolerância de um minuto para o relógio).
+- Dados incompletos permanecem com aviso em `Observação`, listas, mapa e status **Parcial**. Estações sem leitura não são tratadas como chuva zero.
+- Falhas em páginas posteriores preservam as leituras já obtidas, com aviso. Falha geral de autenticação/consulta aparece como **Falha**, com erro sanitizado.
+- Limite de dez páginas por estação e detecção de cursor repetido evitam consultas ilimitadas; interrupções são sinalizadas.
+- Acumulados válidos iguais a zero continuam fora dos rankings, como nas demais fontes; avisos de cobertura aparecem mesmo quando não há chuva.
 
 ## Deploy
 

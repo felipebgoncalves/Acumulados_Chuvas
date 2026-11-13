@@ -17,6 +17,7 @@ class FonteStatus:
     atualizado_em: datetime | None = None
     ultima_tentativa: datetime | None = None
     duracao_segundos: float | None = None
+    parcial: bool = False
 
     @classmethod
     def sucesso_coleta(
@@ -57,7 +58,7 @@ class FonteStatus:
     def to_dict(self) -> dict:
         return {
             "Fonte": self.fonte,
-            "Status": "OK" if self.sucesso else "Falha",
+            "Status": ("Parcial" if self.parcial else "OK") if self.sucesso else "Falha",
             "Registros": self.registros,
             "Última atualização": self.atualizado_em.strftime("%d/%m/%Y %H:%M:%S")
             if self.atualizado_em

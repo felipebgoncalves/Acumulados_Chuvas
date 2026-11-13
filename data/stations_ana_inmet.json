@@ -1,0 +1,350 @@
+{
+  "83013": {
+    "municipio": "MUNIZ FREIRE",
+    "latitude": -20.46583333,
+    "longitude": -41.41194444,
+    "altitude": 530
+  },
+  "83648": {
+    "municipio": "VITÓRIA",
+    "latitude": -20.315833,
+    "longitude": -40.316944,
+    "altitude": 36
+  },
+  "55810000": {
+    "municipio": "SÃO MATEUS",
+    "latitude": -18.6275,
+    "longitude": -40.1117,
+    "altitude": 0
+  },
+  "56991300": {
+    "municipio": "LARANJA DA TERRA",
+    "latitude": -19.9694,
+    "longitude": -41.0678,
+    "altitude": 230
+  },
+  "56991350": {
+    "municipio": "BARRA DE SÃO FRANCISCO",
+    "latitude": -19.9689,
+    "longitude": -41.0964,
+    "altitude": 570
+  },
+  "56991380": {
+    "municipio": "BARRA DE SÃO FRANCISCO",
+    "latitude": -19.9719,
+    "longitude": -41.1106,
+    "altitude": 275
+  },
+  "56992370": {
+    "municipio": "BAIXO GUANDU",
+    "latitude": -19.6903,
+    "longitude": -41.0267,
+    "altitude": 100
+  },
+  "56992380": {
+    "municipio": "BAIXO GUANDU",
+    "latitude": -19.5328,
+    "longitude": -41.0089,
+    "altitude": 74
+  },
+  "56992400": {
+    "municipio": "COLATINA",
+    "latitude": -19.5008,
+    "longitude": -40.9186,
+    "altitude": 71
+  },
+  "56992480": {
+    "municipio": "COLATINA",
+    "latitude": -19.5081,
+    "longitude": -40.8369,
+    "altitude": 71
+  },
+  "56994500": {
+    "municipio": "COLATINA",
+    "latitude": -19.5333,
+    "longitude": -40.6297,
+    "altitude": 62
+  },
+  "57117000": {
+    "municipio": "SANTA MARIA DE JETIBÁ",
+    "latitude": -20.1139,
+    "longitude": -40.8153,
+    "altitude": 835
+  },
+  "57118080": {
+    "municipio": "SANTA MARIA DE JETIBÁ",
+    "latitude": -20.0489,
+    "longitude": -40.4748,
+    "altitude": 643
+  },
+  "57119000": {
+    "municipio": "CACHOEIRO DE ITAPEMIRIM",
+    "latitude": -20.7833,
+    "longitude": -41.1356,
+    "altitude": 661
+  },
+  "57119500": {
+    "municipio": "SANTA MARIA DE JETIBÁ",
+    "latitude": -20.0572,
+    "longitude": -40.6175,
+    "altitude": 432
+  },
+  "57120080": {
+    "municipio": "SANTA LEOPOLDINA",
+    "latitude": -20.1019,
+    "longitude": -40.5153,
+    "altitude": 18
+  },
+  "57150500": {
+    "municipio": "DOMINGOS MARTINS",
+    "latitude": -20.3172,
+    "longitude": -40.6531,
+    "altitude": 455
+  },
+  "57151000": {
+    "municipio": "DOMINGOS MARTINS",
+    "latitude": -20.3628,
+    "longitude": -40.64,
+    "altitude": 275
+  },
+  "57155000": {
+    "municipio": "DOMINGOS MARTINS",
+    "latitude": -20.3569,
+    "longitude": -40.6275,
+    "altitude": 229
+  },
+  "57200000": {
+    "municipio": "DOMINGOS MARTINS",
+    "latitude": -20.3944,
+    "longitude": -40.5583,
+    "altitude": 51
+  },
+  "57256000": {
+    "municipio": "ALFREDO CHAVES",
+    "latitude": -20.6097,
+    "longitude": -40.7861,
+    "altitude": 146
+  },
+  "57370005": {
+    "municipio": "IÚNA",
+    "latitude": -20.4344,
+    "longitude": -41.5008,
+    "altitude": 598
+  },
+  "57370010": {
+    "municipio": "MUNIZ FREIRE",
+    "latitude": -20.4567,
+    "longitude": -41.4792,
+    "altitude": 596
+  },
+  "57370030": {
+    "municipio": "MUNIZ FREIRE",
+    "latitude": -20.4675,
+    "longitude": -41.4722,
+    "altitude": 389
+  },
+  "57390000": {
+    "municipio": "MUNIZ FREIRE",
+    "latitude": -20.495,
+    "longitude": -41.4858,
+    "altitude": 360
+  },
+  "57410000": {
+    "municipio": "ALEGRE",
+    "latitude": -20.5861,
+    "longitude": -41.4969,
+    "altitude": 302
+  },
+  "57413000": {
+    "municipio": "ALEGRE",
+    "latitude": -20.6464,
+    "longitude": -41.4764,
+    "altitude": 201
+  },
+  "57415000": {
+    "municipio": "ALEGRE",
+    "latitude": -20.4578,
+    "longitude": -41.6753,
+    "altitude": 780
+  },
+  "57420000": {
+    "municipio": "IBITIRAMA",
+    "latitude": -20.5406,
+    "longitude": -41.6656,
+    "altitude": 710
+  },
+  "57430000": {
+    "municipio": "ALEGRE",
+    "latitude": -20.6739,
+    "longitude": -41.208,
+    "altitude": 220
+  },
+  "57435000": {
+    "municipio": "ALEGRE",
+    "latitude": -20.715,
+    "longitude": -41.5056,
+    "altitude": 123
+  },
+  "57440000": {
+    "municipio": "ALEGRE",
+    "latitude": -20.7642,
+    "longitude": -41.5233,
+    "altitude": 175
+  },
+  "57473500": {
+    "municipio": "CONCEIÇÃO DO CASTELO",
+    "latitude": -20.4,
+    "longitude": -41.2664,
+    "altitude": 239
+  },
+  "57474000": {
+    "municipio": "CONCEIÇÃO DO CASTELO",
+    "latitude": -20.5728,
+    "longitude": -41.2356,
+    "altitude": 426
+  },
+  "57480000": {
+    "municipio": "CASTELO",
+    "latitude": -20.5728,
+    "longitude": -41.2356,
+    "altitude": 100
+  },
+  "57552000": {
+    "municipio": "CACHOEIRO DE ITAPEMIRIM",
+    "latitude": -20.7017,
+    "longitude": -41.0894,
+    "altitude": 100
+  },
+  "57555500": {
+    "municipio": "CACHOEIRO DE ITAPEMIRIM",
+    "latitude": -20.7833,
+    "longitude": -41.1356,
+    "altitude": 43
+  },
+  "57555800": {
+    "municipio": "CACHOEIRO DE ITAPEMIRIM",
+    "latitude": -20.8367,
+    "longitude": -41.1203,
+    "altitude": 37
+  },
+  "57562000": {
+    "municipio": "CACHOEIRO DE ITAPEMIRIM",
+    "latitude": -20.8744,
+    "longitude": -41.0975,
+    "altitude": 18
+  },
+  "57730000": {
+    "municipio": "DORES DO RIO PRETO",
+    "latitude": -20.7528,
+    "longitude": -41.8772,
+    "altitude": 660
+  },
+  "57739000": {
+    "municipio": "GUAÇUÍ",
+    "latitude": -20.7725,
+    "longitude": -41.6808,
+    "altitude": 0
+  },
+  "57765000": {
+    "municipio": "SÃO JOSÉ DO CALÇADO",
+    "latitude": -20.9561,
+    "longitude": -41.7175,
+    "altitude": 360
+  },
+  "57769000": {
+    "municipio": "SÃO JOSÉ DO CALÇADO",
+    "latitude": -21.0164,
+    "longitude": -41.7156,
+    "altitude": 303
+  },
+  "57774000": {
+    "municipio": "BOM JESUS DO NORTE",
+    "latitude": -21.0936,
+    "longitude": -41.71,
+    "altitude": 163
+  },
+  "57830000": {
+    "municipio": "MIMOSO DO SUL",
+    "latitude": -21.2061,
+    "longitude": -41.4639,
+    "altitude": 40
+  },
+  "57836000": {
+    "municipio": "MIMOSO DO SUL",
+    "latitude": -21.2067,
+    "longitude": -41.3467,
+    "altitude": 15
+  },
+  "A657": {
+    "municipio": "AFONSO CLÁUDIO",
+    "latitude": -20.10416666,
+    "longitude": -41.10694444,
+    "altitude": 507.48
+  },
+  "A617": {
+    "municipio": "ALEGRE",
+    "latitude": -20.75055555,
+    "longitude": -41.48888888,
+    "altitude": 138
+  },
+  "A615": {
+    "municipio": "ALFREDO CHAVES",
+    "latitude": -20.63638888,
+    "longitude": -40.74194444,
+    "altitude": 14.19
+  },
+  "A631": {
+    "municipio": "ECOPORANGA",
+    "latitude": -18.29138888,
+    "longitude": -40.73638888,
+    "altitude": 224
+  },
+  "A614": {
+    "municipio": "LINHARES",
+    "latitude": -19.35694444,
+    "longitude": -40.0686111,
+    "altitude": 40
+  },
+  "A632": {
+    "municipio": "MARILÂNDIA",
+    "latitude": -19.40722222,
+    "longitude": -40.53972221,
+    "altitude": 95
+  },
+  "A622": {
+    "municipio": "PRESIDENTE KENNEDY",
+    "latitude": -21.10083333,
+    "longitude": -41.03944444,
+    "altitude": 69.12
+  },
+  "A613": {
+    "municipio": "SANTA TERESA",
+    "latitude": -19.98833333,
+    "longitude": -40.57944443,
+    "altitude": 975.92
+  },
+  "A616": {
+    "municipio": "SÃO MATEUS",
+    "latitude": -18.6761111,
+    "longitude": -39.86416666,
+    "altitude": 28.66
+  },
+  "A633": {
+    "municipio": "VENDA NOVA DO IMIGRANTE",
+    "latitude": -20.38555555,
+    "longitude": -41.18999999,
+    "altitude": 722
+  },
+  "A634": {
+    "municipio": "VILA VELHA",
+    "latitude": -20.46694443,
+    "longitude": -40.40388888,
+    "altitude": 25
+  },
+  "A612": {
+    "municipio": "VITÓRIA",
+    "latitude": -20.27083332,
+    "longitude": -40.30583333,
+    "altitude": 9
+  }
+}

@@ -13,7 +13,6 @@ except ModuleNotFoundError:
 BASE_DIR = Path(__file__).resolve().parents[2]
 DATA_DIR = BASE_DIR / "data"
 SNAPSHOT_DIR = DATA_DIR / "snapshots"
-SATDES_STATIONS_FILE = DATA_DIR / "stations_satdes.json"
 
 load_dotenv(BASE_DIR / ".env")
 
@@ -34,16 +33,14 @@ REQUEST_TIMEOUT_SECONDS = 30
 ANA_TOKEN_TTL_SECONDS = 900
 
 CEMADEN_URL = "https://resources.cemaden.gov.br/graficos/interativo/getJson2.php?uf=ES"
-SATDES_MAP_URL = "https://satdes-backend.incaper.es.gov.br/api/v1/records/monitoring/map"
-SATDES_STATIONS_URL = "https://satdes-backend.incaper.es.gov.br/api/v1/stations"
 ANA_BASE_URL = "https://www.ana.gov.br/hidrowebservice/EstacoesTelemetricas"
 ANA_TOKEN_URL = f"{ANA_BASE_URL}/OAUth/v1"
 INMET_BASE_URL = "https://apitempo.inmet.gov.br"
 PMVV_BASE_URL = get_env("URL_PMVV", "https://prod-api.plugfield.com.br")
 
 SOURCE_CEMADEN = "CEMADEN"
+SOURCE_CEPDEC = "CEPDEC"
 SOURCE_ANA = "ANA"
-SOURCE_SATDES = "SATDES"
 SOURCE_INMET = "INMET"
 SOURCE_PMVV = "PMVV"
 
@@ -59,6 +56,5 @@ EXTENDED_COLUMNS = [
     "Altitude",
     "DataHoraReferencia",
     "Fonte",
+    "Observação",
 ]
-
-ALLOWED_SATDES_INSTITUTIONS = {"CEPDEC", "INCAPER"}

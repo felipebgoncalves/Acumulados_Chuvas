@@ -66,4 +66,6 @@ def garantir_colunas_estendidas(df: pd.DataFrame) -> pd.DataFrame:
     if "Prec_mm" in resultado.columns:
         resultado["Prec_mm"] = resultado["Prec_mm"].map(to_float).round(2)
 
+    resultado["Observação"] = resultado["Observação"].fillna("")
+
     return resultado[EXTENDED_COLUMNS]

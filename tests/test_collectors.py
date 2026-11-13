@@ -1,6 +1,22 @@
 from datetime import datetime, timezone
 
-from app.dataCollector import InmetCollector, PmvvCollector, SatdesCollector
+from app.dataCollector import AnaCollector, InmetCollector, PmvvCollector
+
+
+def test_ana_preserva_metadados_locais_apos_migracao_de_fonte():
+    collector = AnaCollector("id", "senha", {"57739000": "GUAÇUÍ"})
+    meta = collector.base_estacoes["57739000"]
+    assert meta["municipio"] == "GUAÇUÍ"
+    assert meta["latitude"] == -20.7725
+    assert meta["longitude"] == -41.6808
+
+
+def test_inmet_preserva_metadados_locais_apos_migracao_de_fonte():
+    collector = InmetCollector("token", {"A612": "VITÓRIA"})
+    meta = collector.base_estacoes["A612"]
+    assert meta["municipio"] == "VITÓRIA"
+    assert meta["latitude"] == -20.27083332
+    assert meta["altitude"] == 9
 
 
 def test_inmet_extrai_chuva_de_payload_horario():
@@ -10,40 +26,6 @@ def test_inmet_extrai_chuva_de_payload_horario():
     assert InmetCollector._timestamp_medicao(item) == datetime(
         2026, 6, 27, 12, 0, tzinfo=timezone.utc
     )
-
-
-def test_satdes_filtra_inmet_e_ana_do_payload():
-    payload = (
-        {
-            "data": {
-                "prec": {
-                    "grupo": [
-                        {
-                            "id_station": 1,
-                            "name": "EMA_SER_01",
-                            "code": "CEP_001_A",
-                            "date_utc": "2026-06-27T12:00:00Z",
-                            "instant": "3.2",
-                        },
-                        {
-                            "id_station": 2,
-                            "name": "A612",
-                            "code": "INMET_001_A",
-                            "date_utc": "2026-06-27T12:00:00Z",
-                            "instant": "9.9",
-                        },
-                    ]
-                }
-            }
-        },
-        datetime(2026, 6, 27, 11, 0, tzinfo=timezone.utc),
-        datetime(2026, 6, 27, 13, 0, tzinfo=timezone.utc),
-    )
-
-    resultado = SatdesCollector().process(payload)
-
-    assert len(resultado) == 1
-    assert resultado.loc[0, "Instituição"] == "CEPDEC"
 
 
 def test_pmvv_identifica_sensores_de_chuva_em_mm():

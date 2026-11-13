@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
+from math import isfinite
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -22,9 +23,8 @@ except ModuleNotFoundError:
 
     st = _StreamlitFallback()
 
-from app.codEstacoes import ANA, CEPDEC, INCAPER, INMET
+from app.codEstacoes import ANA, CEPDEC, INMET
 from app.config.settings import (
-    ALLOWED_SATDES_INSTITUTIONS,
     ANA_BASE_URL,
     ANA_TOKEN_TTL_SECONDS,
     ANA_TOKEN_URL,
@@ -33,16 +33,15 @@ from app.config.settings import (
     INMET_BASE_URL,
     PMVV_BASE_URL,
     REQUEST_TIMEOUT_SECONDS,
-    SATDES_MAP_URL,
     SOURCE_ANA,
     SOURCE_CEMADEN,
+    SOURCE_CEPDEC,
     SOURCE_INMET,
     SOURCE_PMVV,
 )
 from app.services.estacoes import carregar_base_estacoes
 from app.services.normalizacao import (
     garantir_colunas_estendidas,
-    normalizar_instituicao,
     to_float,
 )
 
@@ -58,12 +57,6 @@ def erro_http_resumido(exc: Exception) -> str:
         return f"HTTP {response.status_code}"
 
     return exc.__class__.__name__
-
-
-MAPA_ESTACOES_SATDES = {
-    **{k: ("CEPDEC", v) for k, v in CEPDEC.items()},
-    **{k: ("INCAPER", v) for k, v in INCAPER.items()},
-}
 
 
 class DataCollector:
@@ -128,103 +121,180 @@ class CemadenCollector(DataCollector):
         return self.finalize(df)
 
 
-class SatdesCollector(DataCollector):
-    fonte = "SATDES"
-    BASE_URL = SATDES_MAP_URL
+class CepdecCollector(DataCollector):
+    """Chuva por estação da CEPDEC, preservando e sinalizando séries parciais."""
 
-    def __init__(self):
-        self.base_estacoes = carregar_base_estacoes()
+    fonte = SOURCE_CEPDEC
+    MAX_PAGES = 10
 
-    def fetch(self):
-        end_utc = datetime.now(timezone.utc)
-        start_utc = end_utc - timedelta(hours=24)
-        inicio = start_utc.strftime("%Y-%m-%dT%H:%M")
-        fim = end_utc.strftime("%Y-%m-%dT%H:%M")
-        url = f"{self.BASE_URL}/{inicio}/{fim}"
+    def __init__(
+        self, base_url: str, token_url: str, client_id: str, client_secret: str,
+        api_key: str, grant_type: str = "client_credentials",
+        estacoes_dict: dict | None = None, max_workers: int = 4,
+    ):
+        self.base_url = base_url.rstrip("/")
+        self.token_url = token_url
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.api_key = api_key
+        self.grant_type = grant_type
+        self.estacoes = dict(CEPDEC if estacoes_dict is None else estacoes_dict)
+        self.max_workers = max(1, min(max_workers, 4))
 
-        response = requests.get(url, timeout=REQUEST_TIMEOUT_SECONDS)
-        response.raise_for_status()
-        return response.json(), start_utc, end_utc
+    @staticmethod
+    def _timestamp(item: dict) -> datetime | None:
+        try:
+            ts = datetime.fromisoformat(item["data_hora_utc"].replace("Z", "+00:00"))
+            return ts.astimezone(timezone.utc) if ts.tzinfo else None
+        except (KeyError, TypeError, ValueError, AttributeError):
+            return None
 
-    def _metadados_estacao(self, nome: str) -> dict:
-        return self.base_estacoes.get(nome, {})
-
-    def process(self, payload):
-        data, start_utc, end_utc = payload
-        registros = []
-
-        for lista in data.get("data", {}).get("prec", {}).values():
-            for item in lista:
-                nome = item.get("name")
-                codigo = item.get("code", "")
-                metadados = self._metadados_estacao(nome)
-
-                instituicao = normalizar_instituicao(
-                    metadados.get("instituicao")
-                    or MAPA_ESTACOES_SATDES.get(nome, ("DESCONHECIDA", nome))[0]
-                )
-
-                if instituicao not in ALLOWED_SATDES_INSTITUTIONS:
-                    continue
-
-                if "ANA" in codigo or "INMET" in codigo:
-                    continue
-
-                date_utc = item.get("date_utc")
-                if not date_utc:
-                    continue
-
-                ts_utc = datetime.fromisoformat(date_utc.replace("Z", "+00:00"))
-                if not (start_utc <= ts_utc <= end_utc):
-                    continue
-
-                municipio = (
-                    metadados.get("municipio")
-                    or MAPA_ESTACOES_SATDES.get(nome, ("DESCONHECIDA", nome))[1]
-                )
-
-                registros.append(
-                    {
-                        "id_estacao": item.get("id_station"),
-                        "Município": municipio,
-                        "Instituição": instituicao,
-                        "Prec_mm": to_float(item.get("instant")),
-                        "Estação": nome,
-                        "Latitude": metadados.get("latitude"),
-                        "Longitude": metadados.get("longitude"),
-                        "Altitude": metadados.get("altitude"),
-                        "DataHoraReferencia": ts_utc.astimezone(TZ_BRT).isoformat(),
-                        "Fonte": "SATDES",
-                    }
-                )
-
-        df = pd.DataFrame(registros)
-        if df.empty:
-            return self.empty_dataframe()
-
-        agrupado = (
-            df.groupby(
-                [
-                    "id_estacao",
-                    "Município",
-                    "Instituição",
-                    "Estação",
-                    "Latitude",
-                    "Longitude",
-                    "Altitude",
-                    "Fonte",
-                ],
-                dropna=False,
-                as_index=False,
+    def _token(self) -> str:
+        try:
+            response = requests.post(
+                self.token_url,
+                data={"grant_type": self.grant_type, "client_id": self.client_id,
+                      "client_secret": self.client_secret},
+                timeout=REQUEST_TIMEOUT_SECONDS,
             )
-            .agg(
-                Prec_mm=("Prec_mm", "sum"),
-                DataHoraReferencia=("DataHoraReferencia", "max"),
-            )
-        )
+            response.raise_for_status()
+            token = response.json().get("access_token")
+            if not isinstance(token, str) or not token:
+                raise ValueError("token ausente")
+            return token
+        except Exception as exc:
+            raise RuntimeError(f"Autenticação CEPDEC: {erro_http_resumido(exc)}") from None
 
-        agrupado = agrupado[agrupado["Prec_mm"] > 0]
-        return self.finalize(agrupado)
+    def _consultar_estacao(self, codigo: str, headers: dict, inicio: datetime):
+        params = {"estacao": codigo, "intervalo_minutos": 15}
+        leituras, cursores = [], set()
+        for _ in range(self.MAX_PAGES):
+            try:
+                response = requests.get(
+                    f"{self.base_url}/v1/observacoes", params=params,
+                    headers=headers, timeout=REQUEST_TIMEOUT_SECONDS,
+                )
+                response.raise_for_status()
+                data = response.json()
+                if not isinstance(data, dict) or not isinstance(data.get("items"), list):
+                    return leituras, "resposta de observações inválida"
+                items = data["items"]
+                if any(not isinstance(item, dict) for item in items):
+                    return leituras, "resposta de observações inválida"
+                leituras.extend(items)
+                timestamps = [self._timestamp(item) for item in items]
+                # A API pagina do mais recente para o mais antigo.
+                if timestamps and all(ts is not None for ts in timestamps):
+                    if timestamps == sorted(timestamps, reverse=True) and timestamps[-1] <= inicio:
+                        return leituras, ""
+                cursor = data.get("next_cursor")
+                if not cursor:
+                    return leituras, ""
+                if not isinstance(cursor, str) or cursor in cursores or not items:
+                    return leituras, "paginação interrompida: cursor inválido ou repetido"
+                cursores.add(cursor)
+                params = {**params, "cursor": cursor}
+            except Exception as exc:
+                return leituras, erro_http_resumido(exc)
+        return leituras, "paginação interrompida: limite de páginas atingido"
+
+    def fetch(self, now: datetime | None = None) -> pd.DataFrame:
+        fim = now or datetime.now(timezone.utc)
+        if fim.tzinfo is None:
+            raise ValueError("A referência CEPDEC deve incluir fuso horário.")
+        fim = fim.astimezone(timezone.utc)
+        inicio = fim - timedelta(hours=24)
+        headers = {"Authorization": f"Bearer {self._token()}", "x-api-key": self.api_key}
+        payload = {"inicio": inicio, "fim": fim, "leituras": {}, "metadados": {},
+                   "erros": {}, "avisos": []}
+        try:
+            response = requests.get(
+                f"{self.base_url}/v1/estacoes", headers=headers, timeout=REQUEST_TIMEOUT_SECONDS,
+            )
+            response.raise_for_status()
+            items = response.json()
+            if not isinstance(items, list):
+                raise ValueError("metadados inválidos")
+            payload["metadados"] = {item["codigo"]: item for item in items}
+        except Exception as exc:
+            payload["avisos"].append(f"Metadados CEPDEC indisponíveis: {erro_http_resumido(exc)}")
+
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            futures = {executor.submit(self._consultar_estacao, codigo, headers, inicio): codigo
+                       for codigo in self.estacoes}
+            for future in as_completed(futures):
+                codigo = futures[future]
+                leituras, erro = future.result()
+                payload["leituras"][codigo] = leituras
+                if erro:
+                    payload["erros"][codigo] = erro
+
+        df = self.process(payload)
+        if df.empty and payload["erros"]:
+            raise RuntimeError("CEPDEC sem leituras válidas. " + "; ".join(df.attrs["avisos"]))
+        return df
+
+    def get_dataframe(self):
+        return self.fetch()
+
+    def process(self, payload) -> pd.DataFrame:
+        inicio, fim = payload["inicio"], payload["fim"]
+        registros, avisos = [], list(payload.get("avisos", []))
+        for codigo, municipio in self.estacoes.items():
+            validas, descartadas = {}, 0
+            for item in payload["leituras"].get(codigo, []):
+                if item.get("estacao_codigo") != codigo:
+                    continue
+                ts = self._timestamp(item)
+                if ts is None:
+                    descartadas += 1
+                    continue
+                if not inicio < ts <= fim:
+                    continue
+                dados = item.get("dados")
+                valor = dados.get("PRECIPITACAO_MM") if isinstance(dados, dict) else None
+                chuva = to_float(valor, default=float("nan"))
+                if (isinstance(valor, bool) or not isfinite(chuva) or chuva < 0
+                        or item.get("intervalo_minutos") != 15
+                        or item.get("qualidade") != "VALIDO" or item.get("flags")):
+                    descartadas += 1
+                    continue
+                if ts in validas and validas[ts] != chuva:
+                    descartadas += 1
+                validas.setdefault(ts, chuva)
+
+            observacoes = []
+            horarios = sorted(validas)
+            # Uma janela de 24h contém 96 intervalos de 15 minutos.
+            # Tolerância de 1 minuto para pequenas variações no relógio da estação.
+            limites = [inicio, *horarios, fim]
+            lacuna = any(b - a > timedelta(minutes=16) for a, b in zip(limites, limites[1:]))
+            if len(validas) < 96 or lacuna:
+                observacoes.append(f"Acumulado parcial: {len(validas)}/96 leituras válidas nas últimas 24h")
+            if descartadas:
+                observacoes.append(f"{descartadas} leitura(s) inválida(s) ou conflitante(s) descartada(s)")
+            erro = payload.get("erros", {}).get(codigo)
+            if erro:
+                observacoes.append(f"Consulta incompleta: {erro}")
+            if not validas:
+                observacoes.append("Sem chuva mensurável disponível; não equivale a zero de chuva")
+            observacao = "; ".join(observacoes)
+            if observacao:
+                avisos.append(f"{codigo} ({municipio}): {observacao}")
+            if not validas:
+                continue
+            meta = payload.get("metadados", {}).get(codigo, {})
+            registros.append({
+                "Município": municipio, "Prec_mm": round(sum(validas.values()), 2),
+                "Instituição": SOURCE_CEPDEC, "Estação": codigo,
+                "Latitude": meta.get("latitude"), "Longitude": meta.get("longitude"),
+                "Altitude": meta.get("altitude_m"),
+                "DataHoraReferencia": max(validas).astimezone(TZ_BRT).isoformat(),
+                "Fonte": SOURCE_CEPDEC, "Observação": observacao,
+            })
+        df = self.finalize(pd.DataFrame(registros))
+        df.attrs["avisos"] = avisos
+        return df
 
 
 @st.cache_resource(ttl=ANA_TOKEN_TTL_SECONDS)
