@@ -4,6 +4,8 @@ RELATORIO_MELHORIAS.md
 .env
 data/snapshots/
 
+tests
+/tests
 /testes
 /testes/__pycache__/
 /testes/*.py

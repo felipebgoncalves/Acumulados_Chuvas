@@ -37,11 +37,8 @@ ANA_BASE_URL = "https://www.ana.gov.br/hidrowebservice/EstacoesTelemetricas"
 ANA_TOKEN_URL = f"{ANA_BASE_URL}/OAUth/v1"
 INMET_BASE_URL = "https://apitempo.inmet.gov.br"
 PMVV_BASE_URL = "https://prod-api.plugfield.com.br"
-CEPDEC_BASE_URL = "https://sistemas.cb.es.gov.br/simet-api"
-CEPDEC_TOKEN_URL = (
-    "https://sistemas.cb.es.gov.br/keycloak/realms/sistemas-cepdec/"
-    "protocol/openid-connect/token"
-)
+CEPDEC_BASE_URL = "https://sistemas.cb.es.gov.br/simet-api/"
+CEPDEC_TOKEN_URL = "https://sistemas.cb.es.gov.br/keycloak/realms/sistemas-cepdec/protocol/openid-connect/token"
 
 SOURCE_CEMADEN = "CEMADEN"
 SOURCE_CEPDEC = "CEPDEC"
