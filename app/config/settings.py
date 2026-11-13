@@ -36,7 +36,12 @@ CEMADEN_URL = "https://resources.cemaden.gov.br/graficos/interativo/getJson2.php
 ANA_BASE_URL = "https://www.ana.gov.br/hidrowebservice/EstacoesTelemetricas"
 ANA_TOKEN_URL = f"{ANA_BASE_URL}/OAUth/v1"
 INMET_BASE_URL = "https://apitempo.inmet.gov.br"
-PMVV_BASE_URL = get_env("URL_PMVV", "https://prod-api.plugfield.com.br")
+PMVV_BASE_URL = "https://prod-api.plugfield.com.br"
+CEPDEC_BASE_URL = "https://sistemas.cb.es.gov.br/simet-api"
+CEPDEC_TOKEN_URL = (
+    "https://sistemas.cb.es.gov.br/keycloak/realms/sistemas-cepdec/"
+    "protocol/openid-connect/token"
+)
 
 SOURCE_CEMADEN = "CEMADEN"
 SOURCE_CEPDEC = "CEPDEC"

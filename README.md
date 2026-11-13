@@ -72,9 +72,6 @@ INMET_API_TOKEN
 PMVV_API_Key
 PMVV_Username
 PMVV_PASSWORD
-URL_PMVV
-SIMET_URL
-KEYCLOAK_URL_TOKEN
 grant_type
 client_id
 client_secret
@@ -83,7 +80,7 @@ api_key
 
 As credenciais da PMVV/Plugfield são usadas para consultar estações e dados horários de chuva do município de Vila Velha.
 
-Para a CEPDEC, `SIMET_URL` é a URL base e `KEYCLOAK_URL_TOKEN` é a URL completa de autenticação.
+As URLs públicas da CEPDEC e da PMVV estão em `app/config/settings.py`; não precisam ser cadastradas como secrets.
 As chaves são sensíveis a maiúsculas/minúsculas. Use `grant_type=client_credentials`.
 O campo `scope` não é enviado: o valor testado foi rejeitado pelo servidor com `invalid_scope`.
 Cadastre essas mesmas chaves em **Settings → Secrets** no Streamlit Cloud; o `.env` local não é enviado ao GitHub.

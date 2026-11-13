@@ -17,11 +17,14 @@ from app.codEstacoes import ANA, INMET
 from app.config.settings import (
     APP_TITLE,
     CACHE_TTL_SECONDS,
+    CEPDEC_BASE_URL,
+    CEPDEC_TOKEN_URL,
     EXTENDED_COLUMNS,
     SOURCE_ANA,
     SOURCE_CEMADEN,
     SOURCE_INMET,
     SOURCE_PMVV,
+    PMVV_BASE_URL,
     SOURCE_CEPDEC,
     get_env,
 )
@@ -131,16 +134,17 @@ def carregar_acumulados():
     falhas_configuracao = []
 
     cepdec_config = tuple(get_secret(name) for name in (
-        "SIMET_URL", "KEYCLOAK_URL_TOKEN", "client_id", "client_secret", "x_api_key",
+        "client_id", "client_secret", "x_api_key",
     ))
     if all(cepdec_config):
         tarefas.append((SOURCE_CEPDEC, load_cepdec, (
-            *cepdec_config, get_secret("grant_type", "client_credentials"),
+            CEPDEC_BASE_URL, CEPDEC_TOKEN_URL, *cepdec_config,
+            get_secret("grant_type", "client_credentials"),
         )))
     else:
         falhas_configuracao.append((
             dataframe_vazio(),
-            FonteStatus.falha_coleta(SOURCE_CEPDEC, "Credenciais/URLs CEPDEC não configuradas.", 0),
+            FonteStatus.falha_coleta(SOURCE_CEPDEC, "Credenciais CEPDEC não configuradas.", 0),
         ))
 
     ana_id = get_secret("ANA_ID")
@@ -169,7 +173,7 @@ def carregar_acumulados():
     pmvv_api_key = get_secret("PMVV_API_Key")
     pmvv_username = get_secret("PMVV_Username")
     pmvv_password = get_secret("PMVV_PASSWORD")
-    pmvv_base_url = get_secret("URL_PMVV", "https://prod-api.plugfield.com.br")
+    pmvv_base_url = PMVV_BASE_URL
     if pmvv_api_key and pmvv_username and pmvv_password:
         tarefas.append(
             (

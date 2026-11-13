@@ -57,8 +57,7 @@ def test_listas_identificam_acumulado_parcial(monkeypatch):
 
 
 def test_carregar_acumulados_integra_secrets_e_avisos_cepdec(monkeypatch):
-    config = {"SIMET_URL": "https://simet.example", "KEYCLOAK_URL_TOKEN": "https://auth.example",
-              "client_id": "id", "client_secret": "secret", "x_api_key": "key",
+    config = {"client_id": "id", "client_secret": "secret", "x_api_key": "key",
               "grant_type": "client_credentials"}
     monkeypatch.setattr(main, "get_secret", lambda name, default=None: config.get(name, default))
     monkeypatch.setattr(main, "load_cemaden", main.dataframe_vazio)
@@ -69,7 +68,7 @@ def test_carregar_acumulados_integra_secrets_e_avisos_cepdec(monkeypatch):
     monkeypatch.setattr(main, "load_cepdec", load, raising=False)
     monkeypatch.setattr(main, "salvar_snapshot_json", lambda df: None)
     df, geral, status = main.carregar_acumulados()
-    assert chamadas == [("https://simet.example", "https://auth.example", "id", "secret", "key", "client_credentials")]
+    assert chamadas == [(main.CEPDEC_BASE_URL, main.CEPDEC_TOKEN_URL, "id", "secret", "key", "client_credentials")]
     assert len(df) == len(geral) == 1
     assert df.iloc[0]["Observação"]
     cepdec = next(s for s in status if s.fonte == "CEPDEC")
