@@ -134,7 +134,7 @@ def carregar_acumulados():
     falhas_configuracao = []
 
     cepdec_config = tuple(get_secret(name) for name in (
-        "client_id", "client_secret", "x_api_key",
+        "client_id", "client_secret", "x-api-key",
     ))
     if all(cepdec_config):
         tarefas.append((SOURCE_CEPDEC, load_cepdec, (

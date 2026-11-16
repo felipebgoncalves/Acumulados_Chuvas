@@ -57,7 +57,7 @@ def test_listas_identificam_acumulado_parcial(monkeypatch):
 
 
 def test_carregar_acumulados_integra_secrets_e_avisos_cepdec(monkeypatch):
-    config = {"client_id": "id", "client_secret": "secret", "x_api_key": "key",
+    config = {"client_id": "id", "client_secret": "secret", "x-api-key": "key",
               "grant_type": "client_credentials"}
     monkeypatch.setattr(main, "get_secret", lambda name, default=None: config.get(name, default))
     monkeypatch.setattr(main, "load_cemaden", main.dataframe_vazio)
