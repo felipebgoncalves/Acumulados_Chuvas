@@ -1,5 +1,25 @@
 # Acumulados de Chuva
 
+## Versão Docker — branch `pyhton_react`
+
+Esta branch apresenta a migração para **FastAPI + React**, mantendo os coletores Python e a regra original de consolidação. O ranking principal mostra o maior acumulado por município; a lista geral mostra até 60 medições, inclusive registros repetidos por estação ou fonte. A interface usa a identidade visual CEPDEC e mantém mapa, ranking, listas e status das fontes.
+
+Para executar, configure `.env` na raiz (o arquivo é ignorado pelo Git) com `ANA_ID`, `ANA_PWD`, `INMET_API_TOKEN`, `PMVV_API_Key`, `PMVV_Username`, `PMVV_PASSWORD`, `grant_type`, `client_id`, `client_secret` e `x-api-key`. A API aceita também `x_api_key` para compatibilidade. As URLs públicas continuam em `app/config/settings.py`.
+
+```bash
+docker compose up -d --build
+```
+
+Abra <http://localhost:8080>. A primeira coleta acontece em segundo plano; o painel mostra os últimos dados disponíveis enquanto atualiza. `GET /api/health`, `GET /api/dashboard` e `POST /api/refresh` são servidos pelo FastAPI atrás do proxy nginx. O backend não publica porta no host. Para parar: `docker compose down`.
+
+Estrutura nova: `app/api_service.py` orquestra os coletores e mantém o cache; `app/api.py` fornece a API; `frontend/` contém React, Leaflet e nginx; `compose.yaml` inicia os dois contêineres. O Streamlit legado foi mantido para comparação, mas não é usado pela nova interface.
+
+Os testes Python rodam com `python -m pytest -q`; o build do frontend com `cd frontend` e `npm ci && npm run build`.
+
+---
+
+## Versão Streamlit legada
+
 Aplicação em Streamlit para consulta e visualização dos maiores acumulados de chuva nas últimas 24 horas nos municípios do Espírito Santo.
 
 O projeto integra diferentes fontes de dados, normaliza os registros para um contrato comum e apresenta o maior acumulado encontrado por município.

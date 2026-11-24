@@ -1,0 +1,22 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./data/snapshots:/project/data/snapshots
+    restart: unless-stopped
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+    restart: unless-stopped

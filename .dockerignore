@@ -1,0 +1,11 @@
+.git
+.venv
+.env
+.streamlit
+**/__pycache__
+**/.pytest_cache
+frontend/node_modules
+frontend/dist
+data/snapshots
+tests
+testes

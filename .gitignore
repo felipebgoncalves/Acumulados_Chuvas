@@ -4,8 +4,6 @@ RELATORIO_MELHORIAS.md
 .env
 data/snapshots/
 
-tests
-/tests
 /testes
 /testes/__pycache__/
 /testes/*.py
@@ -137,6 +135,8 @@ celerybeat.pid
 # Environments
 .env
 .venv
+frontend/node_modules/
+frontend/dist/
 env/
 venv/
 ENV/
